@@ -9,7 +9,7 @@ def loader():
 class ExfoliationInstaller(ExtensionInstaller):
     def __init__(self):
         super(ExfoliationInstaller, self).__init__(
-            version="0.7",
+            version="0.8rc3",
             name='Belchertown',
             description='A clean modern skin with real time streaming updates and interactive charts. Modeled after BelchertownWeather.com',
             author="Pat OBrien",
@@ -35,6 +35,7 @@ class ExfoliationInstaller(ExtensionInstaller):
                                           'skins/Belchertown/header.html.tmpl',
                                           'skins/Belchertown/index.html.tmpl',
                                           'skins/Belchertown/about.inc.example',
+                                          'skins/Belchertown/index_custom_hooks.inc.example',
                                           'skins/Belchertown/records.inc.example',
                                           'skins/Belchertown/skin.conf',
                                           'skins/Belchertown/style.css'
@@ -46,6 +47,10 @@ class ExfoliationInstaller(ExtensionInstaller):
                                                'skins/Belchertown/NOAA/NOAA-YYYY.txt.tmpl'
                                               ]
                     ),
+                   ('skins/Belchertown/pi', ['skins/Belchertown/pi/index.html.tmpl',
+                                               'skins/Belchertown/pi/pi-header.html.tmpl'
+                                              ]
+                    ),                    
                    ('skins/Belchertown/records', ['skins/Belchertown/records/index.html.tmpl']),
                    ('skins/Belchertown/reports', ['skins/Belchertown/reports/index.html.tmpl']),
                    ('skins/Belchertown/js', ['skins/Belchertown/js/highcharts-dayplots.js.tmpl',
