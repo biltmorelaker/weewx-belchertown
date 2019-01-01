@@ -31,7 +31,7 @@ def logerr(msg):
     logmsg(syslog.LOG_ERR, msg)
     
 # Print version in syslog for easier troubleshooting
-VERSION = "0.8rc3"
+VERSION = "0.8.1"
 loginf("version %s" % VERSION)
 
 class getData(SearchList):
@@ -47,13 +47,12 @@ class getData(SearchList):
         weewx.debug = int(self.generator.config_dict.get('debug', 0))
         
         # Check if the pre-requisites have been completed. Either station_url or belchertown_root_url need to be set. 
-        try:
-            if self.generator.skin_dict['Extras']['belchertown_root_url'] != "":
-                belchertown_root_url = self.generator.skin_dict['Extras']['belchertown_root_url']
-            else:
-                belchertown_root_url = self.generator.config_dict["Station"]["station_url"]
-        except:
-            raise Warning( "Error with Belchertown skin. You must define your website URL using station_url or belchertown_root_url in weewx.conf (preferred) or skin.conf. Even if your site is LAN only, this skin needs this value before continuing. Please see the setup guide on GitHub if you have questions." )
+        if self.generator.skin_dict['Extras']['belchertown_root_url'] != "":
+            belchertown_root_url = self.generator.skin_dict['Extras']['belchertown_root_url']
+        elif self.generator.config_dict["Station"].has_key("station_url"):
+            belchertown_root_url = self.generator.config_dict["Station"]["station_url"]
+        else:
+            belchertown_root_url = ""
 
         # Find the right HTML ROOT
         if 'HTML_ROOT' in self.generator.skin_dict:
@@ -69,7 +68,15 @@ class getData(SearchList):
         # Setup UTC offset hours for moment.js in index.html
         moment_js_stop_struct = time.localtime( time.time() )
         moment_js_utc_offset = (calendar.timegm(moment_js_stop_struct) - calendar.timegm(time.gmtime(time.mktime(moment_js_stop_struct))))/60
-                
+        
+        # Set a default radar URL using station's lat/lon. Moved from skin.conf so we can get station lat/lon from weewx.conf. A lot of stations out there with Belchertown 0.1 through 0.7 are showing the visitor's location and not the proper station location because nobody edited the radar_html which did not have lat/lon set previously.
+        if self.generator.skin_dict['Extras']['radar_html'] == "":
+            lat = self.generator.config_dict['Station']['latitude']
+            lon = self.generator.config_dict['Station']['longitude']
+            radar_html = '<iframe width="650" height="360" src="https://embed.windy.com/embed2.html?lat={}&lon={}&zoom=8&level=surface&overlay=radar&menu=&message=true&marker=&calendar=&pressure=&type=map&location=coordinates&detail=&detailLat={}&detailLon={}&metricWind=mph&metricTemp=%C2%B0F&radarRange=-1" frameborder="0"></iframe>'.format( lat, lon, lat, lon )
+        else:
+            radar_html = self.generator.skin_dict['Extras']['radar_html']
+        
         # Handle the about.inc and records.inc files.
         # about.inc: if the file is present use it, otherwise use a default "please setup about.inc". 
         # records.inc: if the file is present use it, therwise do not show anything. 
@@ -189,10 +196,10 @@ class getData(SearchList):
         # 2. We need to convert the min, max to the site's requested unit.
         # 3. We need to re-calculate the min/max range because the unit may have changed. 
 
-        year_outTemp_max_range_query = wx_manager.getSql( 'SELECT dateTime, ROUND( (max - min), 1 ) as total, ROUND( min, 1), ROUND( max, 1) FROM archive_day_outTemp WHERE dateTime >= %s ORDER BY total DESC LIMIT 1;' % year_start_epoch )
-        year_outTemp_min_range_query = wx_manager.getSql( 'SELECT dateTime, ROUND( (max - min), 1 ) as total, ROUND( min, 1), ROUND( max, 1) FROM archive_day_outTemp WHERE dateTime >= %s ORDER BY total ASC LIMIT 1;' % year_start_epoch )
-        at_outTemp_max_range_query = wx_manager.getSql( 'SELECT dateTime, ROUND( (max - min), 1 ) as total, ROUND( min, 1), ROUND( max, 1) FROM archive_day_outTemp ORDER BY total DESC LIMIT 1;' )
-        at_outTemp_min_range_query = wx_manager.getSql( 'SELECT dateTime, ROUND( (max - min), 1 ) as total, ROUND( min, 1), ROUND( max, 1) FROM archive_day_outTemp ORDER BY total ASC LIMIT 1;' )
+        year_outTemp_max_range_query = wx_manager.getSql( 'SELECT dateTime, ROUND( (max - min), 1 ) as total, ROUND( min, 1 ) as min, ROUND( max, 1 ) as max FROM archive_day_outTemp WHERE dateTime >= %s AND min IS NOT NULL AND max IS NOT NULL ORDER BY total DESC LIMIT 1;' % year_start_epoch )
+        year_outTemp_min_range_query = wx_manager.getSql( 'SELECT dateTime, ROUND( (max - min), 1 ) as total, ROUND( min, 1 ) as min, ROUND( max, 1 ) as max FROM archive_day_outTemp WHERE dateTime >= %s AND min IS NOT NULL AND max IS NOT NULL ORDER BY total ASC LIMIT 1;' % year_start_epoch )
+        at_outTemp_max_range_query = wx_manager.getSql( 'SELECT dateTime, ROUND( (max - min), 1 ) as total, ROUND( min, 1 ) as min, ROUND( max, 1 ) as max FROM archive_day_outTemp WHERE min IS NOT NULL AND max IS NOT NULL ORDER BY total DESC LIMIT 1;' )
+        at_outTemp_min_range_query = wx_manager.getSql( 'SELECT dateTime, ROUND( (max - min), 1 ) as total, ROUND( min, 1 ) as min, ROUND( max, 1 ) as max FROM archive_day_outTemp WHERE min IS NOT NULL AND max IS NOT NULL ORDER BY total ASC LIMIT 1;' )
         
         # Find the group_name for outTemp
         outTemp_unit = converter.group_unit_dict["group_temperature"]
@@ -202,23 +209,33 @@ class getData(SearchList):
 
         # Largest Daily Temperature Range Conversions
         # Max temperature for this day
-        year_outTemp_max_range_max_tuple = (year_outTemp_max_range_query[3], outTemp_unit, 'group_temperature')
-        year_outTemp_max_range_max = round( self.generator.converter.convert(year_outTemp_max_range_max_tuple)[0], outTemp_round )
-        # Min temperature for this day
-        year_outTemp_max_range_min_tuple = (year_outTemp_max_range_query[2], outTemp_unit, 'group_temperature')
-        year_outTemp_max_range_min = round ( self.generator.converter.convert(year_outTemp_max_range_min_tuple)[0], outTemp_round )
-        # Largest Daily Temperature Range total
-        year_outTemp_max_range_total = round( year_outTemp_max_range_max - year_outTemp_max_range_min, outTemp_round )
+        if year_outTemp_max_range_query is not None:
+            year_outTemp_max_range_max_tuple = (year_outTemp_max_range_query[3], outTemp_unit, 'group_temperature')
+            year_outTemp_max_range_max = round( self.generator.converter.convert(year_outTemp_max_range_max_tuple)[0], outTemp_round )
+            # Min temperature for this day
+            year_outTemp_max_range_min_tuple = (year_outTemp_max_range_query[2], outTemp_unit, 'group_temperature')
+            year_outTemp_max_range_min = round ( self.generator.converter.convert(year_outTemp_max_range_min_tuple)[0], outTemp_round )
+            # Largest Daily Temperature Range total
+            year_outTemp_max_range_total = round( year_outTemp_max_range_max - year_outTemp_max_range_min, outTemp_round )
+            # Replace the SQL Query output with the converted values
+            year_outTemp_range_max = [ year_outTemp_max_range_query[0], year_outTemp_max_range_total, year_outTemp_max_range_min, year_outTemp_max_range_max ]
+        else:
+            year_outTemp_range_max = [ calendar.timegm( time.gmtime() ), 0.0, 0.0, 0.0 ]
         
         # Smallest Daily Temperature Range Conversions
         # Max temperature for this day
-        year_outTemp_min_range_max_tuple = (year_outTemp_min_range_query[3], outTemp_unit, 'group_temperature')
-        year_outTemp_min_range_max = round( self.generator.converter.convert(year_outTemp_min_range_max_tuple)[0], outTemp_round )
-        # Min temperature for this day
-        year_outTemp_min_range_min_tuple = (year_outTemp_min_range_query[2], outTemp_unit, 'group_temperature')
-        year_outTemp_min_range_min = round( self.generator.converter.convert(year_outTemp_min_range_min_tuple)[0], outTemp_round )
-        # Smallest Daily Temperature Range total
-        year_outTemp_min_range_total = round( year_outTemp_min_range_max - year_outTemp_min_range_min, outTemp_round )
+        if year_outTemp_min_range_query is not None:
+            year_outTemp_min_range_max_tuple = (year_outTemp_min_range_query[3], outTemp_unit, 'group_temperature')
+            year_outTemp_min_range_max = round( self.generator.converter.convert(year_outTemp_min_range_max_tuple)[0], outTemp_round )
+            # Min temperature for this day
+            year_outTemp_min_range_min_tuple = (year_outTemp_min_range_query[2], outTemp_unit, 'group_temperature')
+            year_outTemp_min_range_min = round( self.generator.converter.convert(year_outTemp_min_range_min_tuple)[0], outTemp_round )
+            # Smallest Daily Temperature Range total
+            year_outTemp_min_range_total = round( year_outTemp_min_range_max - year_outTemp_min_range_min, outTemp_round )
+            # Replace the SQL Query output with the converted values
+            year_outTemp_range_min = [ year_outTemp_min_range_query[0], year_outTemp_min_range_total, year_outTemp_min_range_min, year_outTemp_min_range_max ]
+        else:
+            year_outTemp_range_min = [ calendar.timegm( time.gmtime() ), 0.0, 0.0, 0.0 ]
         
         # All Time - Largest Daily Temperature Range Conversions
         # Max temperature
@@ -229,6 +246,8 @@ class getData(SearchList):
         at_outTemp_max_range_min = round ( self.generator.converter.convert(at_outTemp_max_range_min_tuple)[0], outTemp_round )
         # Largest Daily Temperature Range total
         at_outTemp_max_range_total = round( at_outTemp_max_range_max - at_outTemp_max_range_min, outTemp_round )
+        # Replace the SQL Query output with the converted values
+        at_outTemp_range_max = [ at_outTemp_max_range_query[0], at_outTemp_max_range_total, at_outTemp_max_range_min, at_outTemp_max_range_max ]
 
         # All Time - Smallest Daily Temperature Range Conversions
         # Max temperature for this day
@@ -239,16 +258,11 @@ class getData(SearchList):
         at_outTemp_min_range_min = round( self.generator.converter.convert(at_outTemp_min_range_min_tuple)[0], outTemp_round )
         # Smallest Daily Temperature Range total
         at_outTemp_min_range_total = round( at_outTemp_min_range_max - at_outTemp_min_range_min, outTemp_round )
-
         # Replace the SQL Query output with the converted values
-        year_outTemp_range_max = [ year_outTemp_max_range_query[0], year_outTemp_max_range_total, year_outTemp_max_range_min, year_outTemp_max_range_max ]
-        year_outTemp_range_min = [ year_outTemp_min_range_query[0], year_outTemp_min_range_total, year_outTemp_min_range_min, year_outTemp_min_range_max ]
-        at_outTemp_range_max = [ at_outTemp_max_range_query[0], at_outTemp_max_range_total, at_outTemp_max_range_min, at_outTemp_max_range_max ]
         at_outTemp_range_min = [ at_outTemp_min_range_query[0], at_outTemp_min_range_total, at_outTemp_min_range_min, at_outTemp_min_range_max ]
-
+        
         
         # Rain lookups
-        
         # Find the group_name for rain
         rain_unit = converter.group_unit_dict["group_rain"]
         
@@ -257,16 +271,20 @@ class getData(SearchList):
         
         # Rainiest Day
         rainiest_day_query = wx_manager.getSql( 'SELECT dateTime, ROUND( sum, 2 ) FROM archive_day_rain WHERE dateTime >= %s ORDER BY sum DESC LIMIT 1;' % year_start_epoch )
-        rainiest_day_tuple = (rainiest_day_query[1], rain_unit, 'group_rain')
-        rainiest_day_converted = round( self.generator.converter.convert(rainiest_day_tuple)[0], rain_round )
-        rainiest_day = [ rainiest_day_query[0], rainiest_day_converted ]
+        if rainiest_day_query is not None:
+            rainiest_day_tuple = (rainiest_day_query[1], rain_unit, 'group_rain')
+            rainiest_day_converted = round( self.generator.converter.convert(rainiest_day_tuple)[0], rain_round )
+            rainiest_day = [ rainiest_day_query[0], rainiest_day_converted ]
+        else:
+            rainiest_day = [ calendar.timegm( time.gmtime() ), 0.0 ]
+            
 
         # All Time Rainiest Day
         at_rainiest_day_query = wx_manager.getSql( 'SELECT dateTime, sum FROM archive_day_rain ORDER BY sum DESC LIMIT 1' )
         at_rainiest_day_tuple = (at_rainiest_day_query[1], rain_unit, 'group_rain')
         at_rainiest_day_converted = round( self.generator.converter.convert(at_rainiest_day_tuple)[0], rain_round )
         at_rainiest_day = [ time.strftime( "%B %d, %Y at %-I:%M %p", time.localtime( at_rainiest_day_query[0] ) ), at_rainiest_day_converted ]
-                
+        
 
         # Find what kind of database we're working with and specify the correctly tailored SQL Query for each type of database
         dbtype = self.generator.config_dict['DataBindings']['wx_binding']['database']
@@ -287,9 +305,12 @@ class getData(SearchList):
             
         # Rainiest month
         year_rainiest_month_query = wx_manager.getSql( year_rainiest_month_sql )
-        year_rainiest_month_tuple = (year_rainiest_month_query[1], rain_unit, 'group_rain')
-        year_rainiest_month_converted = round( self.generator.converter.convert(year_rainiest_month_tuple)[0], rain_round )
-        year_rainiest_month = [ calendar.month_name[ int( year_rainiest_month_query[0] ) ], year_rainiest_month_converted ]
+        if year_rainiest_month_query is not None:
+            year_rainiest_month_tuple = (year_rainiest_month_query[1], rain_unit, 'group_rain')
+            year_rainiest_month_converted = round( self.generator.converter.convert(year_rainiest_month_tuple)[0], rain_round )
+            year_rainiest_month = [ calendar.month_name[ int( year_rainiest_month_query[0] ) ], year_rainiest_month_converted ]
+        else:
+            year_rainiest_month = [ "N/A", 0.0 ]
 
         # All time rainiest month
         at_rainiest_month_query = wx_manager.getSql( at_rainiest_month_sql )
@@ -327,8 +348,15 @@ class getData(SearchList):
             year_days_with_rain_output[row[0]] = year_days_with_rain_total
             year_days_without_rain_output[row[0]] = year_days_without_rain_total
 
-        year_days_with_rain = max( zip( year_days_with_rain_output.values(), year_days_with_rain_output.keys() ) )
-        year_days_without_rain = max( zip( year_days_without_rain_output.values(), year_days_without_rain_output.keys() ) )
+        if year_days_with_rain_output:
+            year_days_with_rain = max( zip( year_days_with_rain_output.values(), year_days_with_rain_output.keys() ) )
+        else:
+            year_days_with_rain = [ 0.0, calendar.timegm( time.gmtime() ) ]
+            
+        if year_days_without_rain_output:
+            year_days_without_rain = max( zip( year_days_without_rain_output.values(), year_days_without_rain_output.keys() ) )
+        else:
+            year_days_without_rain = [ 0.0, calendar.timegm( time.gmtime() ) ]
            
         at_days_with_rain_total = 0
         at_days_without_rain_total = 0
@@ -427,6 +455,7 @@ class getData(SearchList):
         """
         Forecast Data
         """
+        forecast_alert_text = ""
         if self.generator.skin_dict['Extras']['forecast_enabled'] == "1":
             forecast_file = local_root + "/json/darksky_forecast.json"
             forecast_json_url = belchertown_root_url + "/json/darksky_forecast.json"
@@ -435,6 +464,7 @@ class getData(SearchList):
             darksky_lang = self.generator.skin_dict['Extras']['darksky_lang'].lower()
             latitude = self.generator.config_dict['Station']['latitude']
             longitude = self.generator.config_dict['Station']['longitude']
+            forecast_alert_enabled = int( self.generator.skin_dict['Extras']['forecast_alert_enabled'] )
             forecast_stale_timer = self.generator.skin_dict['Extras']['forecast_stale']
             forecast_is_stale = False
             
@@ -473,6 +503,14 @@ class getData(SearchList):
             # Process the forecast file
             with open( forecast_file, "r" ) as read_file:
                 data = json.load( read_file )
+            
+            # Weather Alerts (only if enabled)
+            if forecast_alert_enabled == 1:
+                if "alerts" in data:
+                    for alert in data['alerts']:
+                        alert_expires = time.strftime('%B %d, %Y %-I:%M %p', time.localtime( alert['expires'] )) # December 27, 2018, 9:00 PM
+                        # Final alert string
+                        forecast_alert_text += "<i class='fa fa-exclamation-triangle'></i> <a href='%s' target='_blank'>%s in effect until %s</a><br>" % ( alert['uri'], alert['title'], alert_expires )
             
             forecast_html_output = ""
             forecast_updated = time.strftime( "%B %d, %Y, %-I:%M %p %Z", time.localtime( data["currently"]["time"] ) )
@@ -723,6 +761,7 @@ class getData(SearchList):
         search_list_extension = { 'belchertown_version': VERSION,
                                   'belchertown_root_url': belchertown_root_url,
                                   'moment_js_utc_offset': moment_js_utc_offset,
+                                  'radar_html': radar_html,
                                   'about_page_text': about_page_text,
                                   'records_page_text': records_page_text,
                                   'index_hook_after_station_info_enabled': index_hook_after_station_info_enabled,
@@ -756,6 +795,7 @@ class getData(SearchList):
                                   'current_obs_summary': current_obs_summary,
                                   'visibility': visibility,
                                   'visibility_unit': visibility_unit,
+                                  'forecast_alert_text': forecast_alert_text,
                                   'forecastHTML' : forecast_html_output,
                                   'earthquake_time': eqtime,
                                   'earthquake_url': equrl,
