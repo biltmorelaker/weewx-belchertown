@@ -709,12 +709,12 @@
                             <tr>
                                 <td>
                                     <span class="curwindspeed">
-                                        $current.windSpeed.format(format_string="%.1f", None_string="N/A", add_label=False)
+                                        $current.windSpeed.toString(useThisFormat="%.1f", addLabel=False, NONE_string="N/A")
                                     </span>
                                 </td><!-- AJAX -->
                                 <td class="border-left">&nbsp;
                                     <span class="curwindgust">
-                                        $current.windGust.format(format_string="%.1f", None_string="N/A", add_label=False)
+                                        $current.windGust.toString(useThisFormat="%.1f", addLabel=False, NONE_string="N/A")
                                     </span>
                                 </td><!-- AJAX -->
                             </tr>
