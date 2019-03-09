@@ -1913,7 +1913,7 @@ li.comment {
 }
 
 .magnitude {
-	font-size:23px;
+	/* font-size:23px; */
 }
 
 .eq-source {
@@ -2278,6 +2278,11 @@ li.comment {
     }
     .pi .updated-wrapper {
         float: none;
+    }
+    
+    .pi #wxicon {
+    display: initial;
+    margin: initial;
     }
 
     .pi .updated {
