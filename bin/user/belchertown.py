@@ -38,7 +38,7 @@ def logerr(msg):
     logmsg(syslog.LOG_ERR, msg)
     
 # Print version in syslog for easier troubleshooting
-VERSION = "0.9.1rc1"
+VERSION = "0.9.1rc3"
 loginf("version %s" % VERSION)
 
 class getData(SearchList):
@@ -80,16 +80,21 @@ class getData(SearchList):
         # Multiplying by -1 will reverse the number sign and keep 0 (not -0). https://stackoverflow.com/a/14053631/1177153
         highcharts_timezoneoffset = moment_js_utc_offset * -1
         
-        # Get the system locale for use with moment.js
-        system_locale = locale.getdefaultlocale()[0]
+        # Get the system locale for use with moment.js, and the system decimal for use with highcharts
+        system_locale, locale_encoding = locale.getdefaultlocale()
+        system_locale_js = system_locale.replace("_", "-") # Python's locale is underscore. JS uses dashes.
+        highcharts_decimal = locale.localeconv()["decimal_point"]
         
         # Set a default radar URL using station's lat/lon. Moved from skin.conf so we can get station lat/lon from weewx.conf. A lot of stations out there with Belchertown 0.1 through 0.7 are showing the visitor's location and not the proper station location because nobody edited the radar_html which did not have lat/lon set previously.
         if self.generator.skin_dict['Extras']['radar_html'] == "":
             lat = self.generator.config_dict['Station']['latitude']
             lon = self.generator.config_dict['Station']['longitude']
-            radar_html = '<iframe width="650" height="360" src="https://embed.windy.com/embed2.html?lat={}&lon={}&zoom=8&level=surface&overlay=radar&menu=&message=true&marker=&calendar=&pressure=&type=map&location=coordinates&detail=&detailLat={}&detailLon={}&metricWind=mph&metricTemp=%C2%B0F&radarRange=-1" frameborder="0"></iframe>'.format( lat, lon, lat, lon )
+            radar_html = '<iframe width="650" height="360" src="https://embed.windy.com/embed2.html?lat={}&lon={}&zoom=8&level=surface&overlay=radar&menu=&message=true&marker=&calendar=&pressure=&type=map&location=coordinates&detail=&detailLat={}&detailLon={}&metricWind=&metricTemp=&radarRange=-1" frameborder="0"></iframe>'.format( lat, lon, lat, lon )
         else:
             radar_html = self.generator.skin_dict['Extras']['radar_html']
+        
+        # Get the archive interval for the highcharts gapsize
+        archive_interval_ms = int(self.generator.config_dict["StdArchive"]["archive_interval"]) * 1000
         
         """
         Build the all time stats.
@@ -427,7 +432,7 @@ class getData(SearchList):
                 data = json.load( read_file )
             
             current_obs_summary = data["currently"]["summary"]
-            visibility = data["currently"]["visibility"]
+            visibility = locale.format("%g", float( data["currently"]["visibility"] ) )
             
             if data["currently"]["icon"] == "partly-cloudy-night":
                 current_obs_icon = '<img id="wxicon" src="'+belchertown_root_url+'/images/partly-cloudy-night.png">'
@@ -595,7 +600,11 @@ class getData(SearchList):
                                   'moment_js_utc_offset': moment_js_utc_offset,
                                   'highcharts_timezoneoffset': highcharts_timezoneoffset,
                                   'system_locale': system_locale,
+                                  'system_locale_js': system_locale_js,
+                                  'locale_encoding': locale_encoding,
+                                  'highcharts_decimal': highcharts_decimal,
                                   'radar_html': radar_html,
+                                  'archive_interval_ms': archive_interval_ms,
                                   'alltime' : all_stats,
                                   'year_outTemp_range_max': year_outTemp_range_max,
                                   'year_outTemp_range_min': year_outTemp_range_min,
