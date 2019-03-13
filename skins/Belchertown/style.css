@@ -2237,9 +2237,9 @@ li.comment {
 /* End custom wx page */
 
 /* Custom Raspberry Pi Kiosk Page */
-    
     body.pi {
-        font-family:initial;
+        /* font-family:initial; */
+        font-weight: bold;
         padding: 0px;
         overflow: hidden;
         overflow-x: hidden;
@@ -2342,6 +2342,12 @@ li.comment {
         text-align:center;
         padding-bottom: 6px;
     }
+	
+	.pi .highlow { 
+        display:inline;
+		text-align: center;
+		margin: 0 auto;
+	}
      
     .pi .wind_col { 
         text-align: center; 
