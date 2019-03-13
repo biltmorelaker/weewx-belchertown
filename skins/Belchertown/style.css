@@ -2240,7 +2240,7 @@ li.comment {
     
     body.pi {
         /* font-family:initial; */
-        font weight: bold;		
+        font-weight: bold;		
         padding: 0px;
         overflow: hidden;
         overflow-x: hidden;
