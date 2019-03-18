@@ -593,12 +593,12 @@
     </script>
 
 ## If bold_kiosk_font is true invoke the ".pi .site-inner-bold" class in style.css which sets the font-style to bold
-   #if $Extras.pi_kiosk.bold_kiosk_font == "true"  
-       <div class="site-inner-bold site-inner">
-   #else
-        <div class="site-inner">
-   #end if
-        <div class="content-sidebar-wrap">
+ #if $Extras.pi_kiosk_bold == "true"  
+		<div class="site-inner-bold site-inner">
+ #else
+		<div class="site-inner">
+ #end if
+	<div class="content-sidebar-wrap">
 	
 	<article class="weewx page type-page status-publish entry" itemscope="" itemtype="http://schema.org/CreativeWork">
 		
@@ -632,13 +632,13 @@
                     <div class="tempstats">
                         <div class="feelslike"></div><!-- AJAX -->
 						<div class="highlow">
-							<table>
-								<tbody>
-									<tr>
-										<td>High <span class="high">$day.outTemp.max.format("%.1f")</span> | Low <span class="low">$day.outTemp.min.format("%.1f")</span></td>
-									</tr>
-								</tbody>
-							</table>                            
+##							<table>
+##								<tbody>
+##									<tr>
+										High <span class="high">$day.outTemp.max.format("%.1f")</span> | Low <span class="low">$day.outTemp.min.format("%.1f")</span>
+##									</tr>
+##								</tbody>
+##							</table>                            
 						</div><!-- AJAX -->
                     </div>
                     
@@ -679,7 +679,7 @@
                                         </span>
 									</td>
 								</tr>
-##                            #if $day.UV.has_data
+                            #if $day.UV.has_data
                                 <tr>
                                     <td>UV</td>
                                     <td>
@@ -688,7 +688,7 @@
                                         </span>
                                     </td>
                                 </tr>
-##                            #end if
+                            #end if
                             </tbody>
                         </table>
                     </div>	
