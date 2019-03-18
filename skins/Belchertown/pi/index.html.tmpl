@@ -593,12 +593,12 @@
     </script>
 
 ## If bold_kiosk_font is true invoke the ".pi .site-inner-bold" class in style.css which sets the font-style to bold
- #if $Extras.Pi_Kiosk.bold_kiosk_font == "true"  
-		<div class="site-inner-bold site-inner">
- #else
-		<div class="site-inner">
- #end if
-	<div class="content-sidebar-wrap">
+   #if $Extras.pi_kiosk.bold_kiosk_font == "true"  
+       <div class="site-inner-bold site-inner">
+   #else
+        <div class="site-inner">
+   #end if
+        <div class="content-sidebar-wrap">
 	
 	<article class="weewx page type-page status-publish entry" itemscope="" itemtype="http://schema.org/CreativeWork">
 		
