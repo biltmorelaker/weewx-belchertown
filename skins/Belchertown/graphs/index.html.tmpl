@@ -13,33 +13,65 @@
                         <script type="text/javascript">
                             // Document ready calls        
                             jQuery(document).ready(function() {
-                            
-                                daily(); // Initial load daily highcharts
+                                var graph = getSearchParams("graph");
                                 
-                                jQuery('button.wx-btn-today').click(function() {
-                                    daily(); // Load daily highcharts
-                                    jQuery(".wx-graph-text").text("today");
-                                    jQuery(".month-year-hide").show();
-                                });
-                                
-                                jQuery('button.wx-btn-week').click(function() {
-                                    weekly(); // Load weekly highcharts
-                                    jQuery(".wx-graph-text").text("this week");
-                                    jQuery(".month-year-hide").show();
-                                });
-                                
-                                jQuery('button.wx-btn-month').click(function() {
-                                    monthly(); // Load monthly highcharts
-                                    jQuery(".wx-graph-text").text("this month");
-                                    jQuery(".month-year-hide").hide();
-                                });
-                                
-                                jQuery('button.wx-btn-year').click(function() {
-                                    yearly(); // Load yearly highcharts
-                                    jQuery(".wx-graph-text").text("this year");
-                                    jQuery(".month-year-hide").hide();
-                                });
+                                if ( graph == "today" ) {
+                                    showToday();
+                                } else if ( graph == "week" ) {
+                                    showWeek();
+                                } else if ( graph == "month" ) {
+                                    showMonth();
+                                } else if ( graph == "year" ) {
+                                    showYear();
+                                } else {
+                                    // No match, show daily
+                                    showToday();
+                                }
                             });
+                            
+                            // Get the URL Var so we can show the right NOAA file.
+                            // Source: https://stackoverflow.com/a/26744533/1177153
+                            function getSearchParams(k) {
+                                var p={};
+                                location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi,function(s,k,v){p[k]=v});
+                                return k?p[k]:p;
+                            }
+                            
+                            function showToday() {
+                                daily(); // Load daily highcharts
+                                jQuery(".wx-graph-text").text("today");
+                                jQuery(".chart_day").show();
+                                jQuery(".chart_week").hide();
+                                jQuery(".chart_month").hide();
+                                jQuery(".chart_year").hide();
+                            }
+                            
+                            function showWeek() {
+                                weekly(); // Load weekly highcharts
+                                jQuery(".wx-graph-text").text("this week");
+                                jQuery(".chart_day").hide();
+                                jQuery(".chart_week").show();
+                                jQuery(".chart_month").hide();
+                                jQuery(".chart_year").hide();
+                            }
+                            
+                            function showMonth() {
+                                monthly(); // Load monthly highcharts
+                                jQuery(".wx-graph-text").text("this month");
+                                jQuery(".chart_day").hide();
+                                jQuery(".chart_week").hide();
+                                jQuery(".chart_month").show();
+                                jQuery(".chart_year").hide();
+                            }
+                            
+                            function showYear() {
+                                yearly(); // Load yearly highcharts
+                                jQuery(".wx-graph-text").text("this year");
+                                jQuery(".chart_day").hide();
+                                jQuery(".chart_week").hide();
+                                jQuery(".chart_month").hide();
+                                jQuery(".chart_year").show();
+                            }
                                 
                         </script>
                         
@@ -48,38 +80,26 @@
                         <!-- Begin row -->
                         <div class="row">
                             <div class="col-sm-12 wx-buttons">
-                                <button type="button" class="btn btn-primary wx-btn-today">Today</button> <button type="button" class="btn btn-primary wx-btn-week">Week</button> <button type="button" class="btn btn-primary wx-btn-month">Month</button> <button type="button" class="btn btn-primary wx-btn-year">Year</button>
+                                <a href="./?graph=today"><button type="button" class="btn btn-primary wx-btn-today">Today</button></a> <a href="./?graph=week"><button type="button" class="btn btn-primary wx-btn-week">Week</button></a> <a href="./?graph=month"><button type="button" class="btn btn-primary wx-btn-month">Month</button></a> <a href="./?graph=year"><button type="button" class="btn btn-primary wx-btn-year">Year</button></a>
                             </div>
                             <div class="col-sm-12 wx-buttons-description">
                                 Graphs for <span class='wx-graph-text'>today</span>
                             </div>
                         </div>
                         <!-- End row -->
-                                    
-                        #if $Extras.has_key("highcharts_graph_1") and $Extras.highcharts_graph_1 != ''
-                        <div id="$Extras.highcharts_graph_1" style="width:100%; height:350px;"></div>
-                        #end if
                         
-                        #if $Extras.has_key("highcharts_graph_2") and $Extras.highcharts_graph_2 != ''
-                        <div id="$Extras.highcharts_graph_2" style="width:100%; height:350px;"></div>
+                        #for $timespan in $charts
+                        
+                        #for $plotname in $charts[$timespan]
+                        #if $timespan == "day"
+                        <div id="$timespan$plotname" class="chart_$timespan" style="width:100%; height:350px;"></div>
+                        #else
+                        <div id="$timespan$plotname" class="chart_$timespan" style="width:100%; height:350px;display:none;"></div>
                         #end if
-
-                        #if $Extras.has_key("highcharts_graph_3") and $Extras.highcharts_graph_3 != ''
-                        <div id="$Extras.highcharts_graph_3" style="width:100%; height:350px;"></div>
-                        #end if
-
-                        #if $Extras.has_key("highcharts_graph_4") and $Extras.highcharts_graph_4 != ''
-                        <div id="$Extras.highcharts_graph_4" style="width:100%; height:350px;"></div>
-                        #end if
-
-                        #if $Extras.has_key("highcharts_graph_5") and $Extras.highcharts_graph_5 != ''
-                        <div id="$Extras.highcharts_graph_5" style="width:100%; height:350px;"></div>
-                        #end if
-
-                        #if $Extras.has_key("highcharts_graph_6") and $Extras.highcharts_graph_6 != ''
-                        <div id="$Extras.highcharts_graph_6" style="width:100%; height:350px;"></div>
-                        #end if
-                                
+                        #end for
+                        
+                        #end for
+                        
                         <div class="clear"></div>
                     
                     </div>
