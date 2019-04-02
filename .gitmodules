@@ -1,3 +1,6 @@
 [submodule "wiki"]
 	path = wiki
 	url = https://github.com/biltmorelaker/weewx-belchertown/wiki
+[submodule "weewx-belchertown.wiki"]
+	path = weewx-belchertown.wiki
+	url = https://github.com/biltmorelaker/weewx-belchertown.wiki.git
