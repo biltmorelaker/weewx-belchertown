@@ -1,0 +1,5 @@
+[submodule "weewx-belchertown.wiki"]
+	url = https://github.com/biltmorelaker/weewx-belchertown/wiki
+[submodule "wiki"]
+	path = wiki
+	url = https://github.com/biltmorelaker/weewx-belchertown/wiki
