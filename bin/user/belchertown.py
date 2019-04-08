@@ -51,7 +51,7 @@ def logerr(msg):
     logmsg(syslog.LOG_ERR, msg)
     
 # Print version in syslog for easier troubleshooting
-VERSION = "1.0rc5"
+VERSION = "1.0rc7"
 loginf("version %s" % VERSION)
 
 class getData(SearchList):
@@ -65,6 +65,13 @@ class getData(SearchList):
         
         # Look for the debug flag which can be used to show more logging
         weewx.debug = int(self.generator.config_dict.get('debug', 0))
+        
+        # Setup label dict for text and titles
+        try:
+            d = self.generator.skin_dict['Labels']['Generic']
+        except KeyError:
+            d = {}
+        label_dict = weeutil.weeutil.KeyDict(d)
         
         # Check if the pre-requisites have been completed. Either station_url or belchertown_root_url need to be set. 
         if self.generator.skin_dict['Extras']['belchertown_root_url'] != "":
@@ -189,7 +196,7 @@ class getData(SearchList):
             # Replace the SQL Query output with the converted values
             year_outTemp_range_max = [ year_outTemp_max_range_query[0], locale.format("%g", float(year_outTemp_max_range_total)), locale.format("%g", float(year_outTemp_max_range_min)), locale.format("%g", float(year_outTemp_max_range_max)) ]
         else:
-            year_outTemp_range_max = [ calendar.timegm( time.gmtime() ), 0.0, 0.0, 0.0 ]
+            year_outTemp_range_max = [ calendar.timegm( time.gmtime() ), locale.format("%.1f", 0), locale.format("%.1f", 0), locale.format("%.1f", 0) ]
         
         # Smallest Daily Temperature Range Conversions
         # Max temperature for this day
@@ -204,7 +211,7 @@ class getData(SearchList):
             # Replace the SQL Query output with the converted values
             year_outTemp_range_min = [ year_outTemp_min_range_query[0], locale.format("%g", float(year_outTemp_min_range_total)), locale.format("%g", float(year_outTemp_min_range_min)), locale.format("%g", float(year_outTemp_min_range_max)) ]
         else:
-            year_outTemp_range_min = [ calendar.timegm( time.gmtime() ), 0.0, 0.0, 0.0 ]
+            year_outTemp_range_min = [ calendar.timegm( time.gmtime() ), locale.format("%.1f", 0), locale.format("%.1f", 0), locale.format("%.1f", 0) ]
         
         # All Time - Largest Daily Temperature Range Conversions
         # Max temperature
@@ -245,7 +252,7 @@ class getData(SearchList):
             rainiest_day_converted = rain_round % self.generator.converter.convert(rainiest_day_tuple)[0]
             rainiest_day = [ rainiest_day_query[0], rainiest_day_converted ]
         else:
-            rainiest_day = [ calendar.timegm( time.gmtime() ), 0.00 ]
+            rainiest_day = [ calendar.timegm( time.gmtime() ), locale.format("%.2f", 0) ]
             
 
         # All Time Rainiest Day
@@ -322,12 +329,12 @@ class getData(SearchList):
         if year_days_with_rain_output:
             year_days_with_rain = max( zip( year_days_with_rain_output.values(), year_days_with_rain_output.keys() ) )
         else:
-            year_days_with_rain = [ 0.0, calendar.timegm( time.gmtime() ) ]
+            year_days_with_rain = [ locale.format("%.1f", 0), calendar.timegm( time.gmtime() ) ]
             
         if year_days_without_rain_output:
             year_days_without_rain = max( zip( year_days_without_rain_output.values(), year_days_without_rain_output.keys() ) )
         else:
-            year_days_without_rain = [ 0.0, calendar.timegm( time.gmtime() ) ]
+            year_days_without_rain = [ locale.format("%.1f", 0), calendar.timegm( time.gmtime() ) ]
            
         at_days_with_rain_total = 0
         at_days_without_rain_total = 0
@@ -474,7 +481,7 @@ class getData(SearchList):
             with open( forecast_file, "r" ) as read_file:
                 data = json.load( read_file )
             
-            current_obs_summary = data["currently"]["summary"]
+            current_obs_summary = label_dict[ data["currently"]["summary"].lower() ]
             visibility = locale.format("%g", float( data["currently"]["visibility"] ) )
             
             if data["currently"]["icon"] == "partly-cloudy-night":
@@ -738,7 +745,7 @@ class JsonGenerator(weewx.reportengine.ReportGenerator):
             d = self.skin_dict['Labels']['Generic']
         except KeyError:
             d = {}
-        title_dict = weeutil.weeutil.KeyDict(d)
+        label_dict = weeutil.weeutil.KeyDict(d)
         
         # Final output dict
         output = {}
@@ -811,9 +818,9 @@ class JsonGenerator(weewx.reportengine.ReportGenerator):
                     # Get any custom names for this observation 
                     name = line_options.get('name', None)
                     if not name:
-                        # No explicit name. Look up a generic one. NB: title_dict is a KeyDict which
+                        # No explicit name. Look up a generic one. NB: label_dict is a KeyDict which
                         # will substitute the key if the value is not in the dictionary.
-                        name = title_dict[observation_type]
+                        name = label_dict[observation_type]
                                         
                     if observation_type == "rainTotal":
                         obs_label = "rain"
@@ -874,10 +881,11 @@ class JsonGenerator(weewx.reportengine.ReportGenerator):
             # Special Belchertown wind rose with Highcharts aggregator
             # Wind speeds are split into the first 7 beaufort groups. https://en.wikipedia.org/wiki/Beaufort_scale
             
-            # TODO: Force no aggregate_type ?
+            # Force no aggregate_type
             if aggregate_type:
                 aggregate_type = None
                 
+            # Force no aggregate_interval
             if aggregate_interval:
                 aggregate_interval = None
             
@@ -1007,34 +1015,35 @@ class JsonGenerator(weewx.reportengine.ReportGenerator):
             
             # Group all together to get wind frequency percentages
             wind_sum = sum(group_0_series_data + group_1_series_data + group_2_series_data + group_3_series_data + group_4_series_data + group_5_series_data + group_6_series_data)
-            y = 0
-            while y < len(group_0_series_data):
-                group_0_series_data[y] = round(group_0_series_data[y] / wind_sum * 100)
-                y += 1
-            y = 0
-            while y < len(group_1_series_data):
-                group_1_series_data[y] = round(group_1_series_data[y] / wind_sum * 100)
-                y += 1
-            y = 0
-            while y < len(group_2_series_data):
-                group_2_series_data[y] = round(group_2_series_data[y] / wind_sum * 100)
-                y += 1
-            y = 0
-            while y < len(group_3_series_data):
-                group_3_series_data[y] = round(group_3_series_data[y] / wind_sum * 100)
-                y += 1
-            y = 0
-            while y < len(group_4_series_data):
-                group_4_series_data[y] = round(group_4_series_data[y] / wind_sum * 100)
-                y += 1
-            y = 0
-            while y < len(group_5_series_data):
-                group_5_series_data[y] = round(group_5_series_data[y] / wind_sum * 100)
-                y += 1
-            y = 0
-            while y < len(group_6_series_data):
-                group_6_series_data[y] = round(group_6_series_data[y] / wind_sum * 100)
-                y += 1
+            if wind_sum > 0:
+                y = 0
+                while y < len(group_0_series_data):
+                    group_0_series_data[y] = round(group_0_series_data[y] / wind_sum * 100)
+                    y += 1
+                y = 0
+                while y < len(group_1_series_data):
+                    group_1_series_data[y] = round(group_1_series_data[y] / wind_sum * 100)
+                    y += 1
+                y = 0
+                while y < len(group_2_series_data):
+                    group_2_series_data[y] = round(group_2_series_data[y] / wind_sum * 100)
+                    y += 1
+                y = 0
+                while y < len(group_3_series_data):
+                    group_3_series_data[y] = round(group_3_series_data[y] / wind_sum * 100)
+                    y += 1
+                y = 0
+                while y < len(group_4_series_data):
+                    group_4_series_data[y] = round(group_4_series_data[y] / wind_sum * 100)
+                    y += 1
+                y = 0
+                while y < len(group_5_series_data):
+                    group_5_series_data[y] = round(group_5_series_data[y] / wind_sum * 100)
+                    y += 1
+                y = 0
+                while y < len(group_6_series_data):
+                    group_6_series_data[y] = round(group_6_series_data[y] / wind_sum * 100)
+                    y += 1
             
             # Setup the labels based on unit
             if windSpeedUnit == "mile_per_hour" or windSpeedUnit == "mile_per_hour2":

@@ -3,6 +3,40 @@ var belchertown_debug = $belchertown_debug;
 var moment_locale = "$system_locale_js";
 moment.locale(moment_locale);
 
+jQuery(document).ready(function() {
+        
+    // Change theme if a URL variable is set
+    if ( window.location.search.indexOf('theme') ) {
+        if (window.location.search.indexOf('?theme=dark') === 0) {
+            if (belchertown_debug > 0) {
+                console.log("Theme: Setting dark theme because of URL override");
+            }
+            changeTheme("dark");
+        } else if (window.location.search.indexOf('?theme=light') === 0) {
+            if (belchertown_debug > 0) {
+                console.log("Theme: Setting light theme because of URL override");
+            }
+            changeTheme("light");
+        }
+    }
+
+    #if $Extras.has_key('theme_toggle_enabled') and $Extras.theme_toggle_enabled == '1'
+    // Dark mode checkbox toggle switcher
+    document.getElementById('themeSwitch').addEventListener('change', function(event){
+        if (belchertown_debug > 0) {
+            console.log("Theme: Toggle button changed");
+        }
+        (event.target.checked) ? changeTheme("dark") : changeTheme("light");
+    });
+    #end if
+    
+});
+
+#if $Extras.has_key("theme") and $Extras.theme == 'auto'
+// Run this on every page for dark mode if skin theme is auto
+ajaxweewx();
+#end if
+
 // Disable AJAX caching
 jQuery.ajaxSetup({
     cache:false
@@ -178,19 +212,76 @@ function titleCase(str) {
     }).join(' ');
 }
 
+function autoTheme(sunset_hour, sunset_min, sunrise_hour, sunrise_min) {
+    // First check if ?theme= is in URL. If so, bail out and do not change anything. 
+    if ( getURLvar("theme") ) {
+        if (belchertown_debug > 0) {
+            console.log("Auto theme: theme override detected in URL. Skipping auto theme");
+        }
+        return true;
+    }
+    if (belchertown_debug > 0) {
+        console.log("Auto theme: checking to see if theme needs to be switched");
+    }
+    
+    var d = new Date();
+    var nowHour = d.getHours();
+    var nowMinutes = d.getMinutes();
+    nowHour = nowHour;
+    sunrise_hour = sunrise_hour;
+    sunset_hour = sunset_hour;
+    
+    // Determine if it's day time. https://stackoverflow.com/a/14718577/1177153
+    if ( sunrise_hour <= nowHour && nowHour < sunset_hour ) {
+        dayTime = true;
+    } else {
+        dayTime = false;
+    }
+    
+    if (belchertown_debug > 0) {
+        console.log("Auto theme: sunrise: " + sunrise_hour);
+        console.log("Auto theme: now: " + nowHour);
+        console.log("Auto theme: sunset: " + sunset_hour);
+        console.log("Auto theme: are we in daylight hours: " + dayTime);
+    }
+    
+    if ( dayTime ) {
+        // Day time, set light if needed
+        if ( document.body.classList.contains("dark") ) {
+            if (belchertown_debug > 0) {
+                console.log("Auto theme: setting light theme since dayTime variable is true (day)");
+            }
+            changeTheme("light");
+        }
+    } else {
+        // Night time, set dark if needed
+        if ( document.body.classList.contains("light") ) {
+            if (belchertown_debug > 0) {
+                console.log("Auto theme: setting dark theme since dayTime variable is false (night)");
+            }
+            changeTheme("dark");
+        }
+    }
+}
+
 function changeTheme(themeName) {
+    if (belchertown_debug > 0) {
+        console.log("Theme: Changing to " + themeName);
+    }
     if ( themeName == "dark" ) {
         // Apply dark theme
-        jQuery("#bootstrapStyle").attr('href', '//stackpath.bootstrapcdn.com/bootswatch/3.4.1/darkly/bootstrap.min.css?ver=' + new Date().getTime() ); 
-        jQuery("#highchartsStyle").attr('href', '$belchertown_root_url/belchertown-dark.css?ver=' + new Date().getTime() );
-        // Re-apply standard Belchertown styles to override bootstrap
-        jQuery("#belchertownStyle").attr('href', '$belchertown_root_url/style.css?ver=' + new Date().getTime() );
+        jQuery('body').addClass("dark");
+        jQuery('body').removeClass("light");
+        #if $Extras.has_key('theme_toggle_enabled') and $Extras.theme_toggle_enabled == '1'
+        jQuery("#themeSwitch").prop( "checked", true );
+        #end if
     } else {
-        jQuery("#bootstrapStyle").attr('href', '//stackpath.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css?ver=' + new Date().getTime() ); 
-        //jQuery("#highchartsStyle").attr('href', '//cdnjs.cloudflare.com/ajax/libs/highcharts/7.0.3/css/highcharts.css?ver=' + new Date().getTime() );
-        jQuery("#highchartsStyle").attr('href', '' );
-        // Re-apply standard Belchertown styles to override bootstrap
-        jQuery("#belchertownStyle").attr('href', '$belchertown_root_url/style.css?ver=' + new Date().getTime());
+        // Apply light theme
+        jQuery('body').addClass("light");
+        jQuery('body').removeClass("dark");
+        #if $Extras.has_key('theme_toggle_enabled') and $Extras.theme_toggle_enabled == '1'
+        jQuery("#themeSwitch").prop( "checked", false );
+        #end if
     }
 }
 
@@ -203,6 +294,12 @@ function update_weewx_data( data ) {
     if (belchertown_debug > 0) {
         console.log("Updating weewx data");
     }
+    
+    #if $Extras.has_key("theme") and $Extras.theme == 'auto'
+    // Auto theme if enabled
+    autoTheme(data["almanac"]["sunset_hour"], data["almanac"]["sunset_minute"], data["almanac"]["sunrise_hour"], data["almanac"]["sunrise_minute"], );
+    #end if
+    
     // Daily High Low
     high = data["day"]["outTemp"]["max"];
     low = data["day"]["outTemp"]["min"];
@@ -263,7 +360,7 @@ function update_weewx_data( data ) {
             break;
     }
     jQuery(".moon-phase").html( titleCase( data["almanac"]["moon"]["moon_phase"] ) ); // Javascript function above
-    jQuery(".moon-visible").html( "<strong>" + data["almanac"]["moon"]["moon_fullness"] + "%</strong> visible" );
+    jQuery(".moon-visible").html( "<strong>" + data["almanac"]["moon"]["moon_fullness"] + "%</strong> $obs.label.moon_visible" );
 }
 
 #if $Extras.has_key("forecast_enabled") and $Extras.forecast_enabled == '1'
@@ -290,7 +387,7 @@ function update_forecast_data( data ) {
         forecast_alert_text = "";
         for ( i = 0; i < data['alerts'].length; i++ ) { 
             alert_expires = moment.unix( data['alerts'][i]['expires'] ).format( 'LLL' );
-            forecast_alert_text += "<i class='fa fa-exclamation-triangle'></i> <a href='" + data['alerts'][i]['uri'] + "' target='_blank'>" + data['alerts'][i]['title'] + " in effect until " + alert_expires + "</a><br>";
+            forecast_alert_text += "<i class='fa fa-exclamation-triangle'></i> <a href='" + data['alerts'][i]['uri'] + "' target='_blank'>" + data['alerts'][i]['title'] + " $obs.label.alert_in_effect " + alert_expires + "</a><br>";
         }
         jQuery(".wx-stn-alert-text").html( forecast_alert_text );
         jQuery(".wx-stn-alert").show();
@@ -315,51 +412,51 @@ function update_forecast_data( data ) {
         var condition_text = "";
         switch ( data["daily"]["data"][i]["icon"] ) {
             case "clear-day":
-                condition_text = "Clear";
+                condition_text = "$obs.label.clear";
                 break;
             case "clear-night":
-                condition_text = "Clear";
+                condition_text = "$obs.label.clear";
                 break;
             case "rain":
-                condition_text = "Rain";
+                condition_text = "$obs.label.rain";
                 break;
             case "snow":
-                condition_text = "Snow";
+                condition_text = "$obs.label.snow";
                 break;
             case "sleet":
-                condition_text = "Sleet";
+                condition_text = "$obs.label.sleet";
                 break;
             case "wind":
-                condition_text = "Windy";
+                condition_text = "$obs.label.windy";
                 break;
             case "fog":
-                condition_text = "Fog";
+                condition_text = "$obs.label.fog";
                 break;
             case "cloudy":
-                condition_text = "Overcast";
+                condition_text = "$obs.label.overcast";
                 break;
             case "partly-cloudy-day":
-                condition_text = "Partly Cloudy";
+                condition_text = "$obs.label.partly_cloudy";
                 break;
             case "partly-cloudy-night":
-                condition_text = "Clear"; // https://darksky.net/dev/docs/faq - So you can just treat partly-cloudy-night as an alias for clear-day.
+                condition_text = "$obs.label.clear"; // https://darksky.net/dev/docs/faq - So you can just treat partly-cloudy-night as an alias for clear-day.
                 break;
             case "hail":
-                condition_text = "Hail";
+                condition_text = "$obs.label.hail";
                 break;
             case "thunderstorm":
-                condition_text = "Thunderstorm";
+                condition_text = "$obs.label.thunderstorm";
                 break;
             case "tornado":
-                condition_text = "Tornado";
+                condition_text = "$obs.label.tornado";
                 break;
         }
         
         if ( i == 0 ) {
-            output_html += '<div class="col-sm-1-5 wuforecast">';
-            var weekday = "Today";
+            output_html += '<div class="col-sm-1-5 forecast-day">';
+            var weekday = "$obs.label.darksky_forecast_today";
         } else {
-            output_html += '<div class="col-sm-1-5 wuforecast border-left">';
+            output_html += '<div class="col-sm-1-5 forecast-day border-left">';
             var weekday = moment.unix( data["daily"]["data"][i]["time"] ).format( "ddd l" ).replace(/([A-Z])|[\/\-\.]\b[0-9]{4}\b/g, ' $1'); // Creates a short date by removing "/YYYY" or ".YYYY" or "-YYYY" - https://stackoverflow.com/a/12704805/1177153
         }
         output_html += '<span id="weekday">'+weekday+'</span>';
@@ -384,11 +481,11 @@ function update_forecast_data( data ) {
         output_html += '<div class="forecast-wind">';
         output_html += '<i class="wi wi-strong-wind"></i> <span>'+ parseFloat( data["daily"]["data"][i]["windSpeed"] ).toFixed(0) +'</span> | <span> '+ parseFloat( data["daily"]["data"][i]["windGust"] ).toFixed(0) +'$unit.label.windSpeed';
         output_html += '</div>';
-        output_html += '<a href="https://darksky.net/details/'+data["latitude"]+','+data["longitude"]+'/'+moment.unix( data["daily"]["data"][i]["time"] ).format( "YYYY-M-D" )+'" target="_blank">Daily Forecast</a>';
+        output_html += '<a href="https://darksky.net/details/'+data["latitude"]+','+data["longitude"]+'/'+moment.unix( data["daily"]["data"][i]["time"] ).format( "YYYY-M-D" )+'" target="_blank">$obs.label.daily_forecast</a>';
         output_html += '</div>';
     }
     forecast_subtitle = moment.unix( data["currently"]["time"] ).format( 'LLL' );
-    jQuery(".forecast-subtitle").text( "Last Updated on " + forecast_subtitle );
+    jQuery(".forecast-subtitle").text( "$obs.label.forecast_last_updated " + forecast_subtitle );
     jQuery(".forecasts").html( output_html );
 }
 #end if
@@ -435,7 +532,7 @@ function connect() {
     if (belchertown_debug > 0) {
         console.log("Connecting to MQTT");
     }
-    reported = "Connecting to weather station real time data.";
+    reported = "$obs.label.mqtt_websockets_connecting";
     jQuery(".updated").text( reported );
     jQuery(".onlineMarker").hide();
     jQuery(".offlineMarker").hide();
@@ -461,7 +558,7 @@ function onConnect() {
     if (belchertown_debug > 0) {
         console.log("MQTT Connected. Subscribing.");
     }
-    reported = "Connected. Waiting for data.";
+    reported = "$obs.label.mqtt_websockets_waiting";
     jQuery(".updated").text( reported );
     jQuery(".onlineMarker").hide();
     jQuery(".offlineMarker").hide();
@@ -480,7 +577,7 @@ function onFailure() {
     jQuery(".loadingMarker").hide();
     epoch = parseFloat( (d / 1000) ).toFixed(0); // Convert millis to seconds
     updated = moment.unix(epoch).utcOffset($moment_js_utc_offset).format("LL, LTS");
-    jQuery(".updated").html( "Failed connecting to the weather station on "+ updated +". Please try again later!" );
+    jQuery(".updated").html( "$obs.label.mqtt_websockets_failed" );
     console.log( updated + ": Cannot connect to MQTT broker" );
 }
 
@@ -492,7 +589,7 @@ function onConnectionLost(responseObject) {
     jQuery(".loadingMarker").hide();
     epoch = parseFloat( (d / 1000) ).toFixed(0);  // Convert millis to seconds
     updated = moment.unix(epoch).utcOffset($moment_js_utc_offset).format("LL, LTS");
-    jQuery(".updated").html( "Lost connection to the weather station on "+ updated +". Please try again later!" );
+    jQuery(".updated").html( "$obs.label.mqtt_websockets_lost" );
     if (responseObject.errorCode !== 0) {
         console.log( updated + ": mqtt Connection Lost: "+responseObject.errorMessage );
     }
@@ -511,7 +608,7 @@ function inactive(){
     jQuery(".onlineMarker").hide(); // Hide online beacon
     jQuery(".offlineMarker").show(); // Show offline beacon
     jQuery(".loadingMarker").hide(); // Hide loading beacon
-    jQuery(".updated").html( "Live updates have stopped. <button type='button' class='btn btn-primary restart-interval'>Continue live updates</button>" );
+    jQuery(".updated").html( "$obs.label.mqtt_websockets_stopped <button type='button' class='btn btn-primary restart-interval'>$obs.label.mqtt_websockets_continue</button>" );
 }
 
 // Handle MQTT message
@@ -527,7 +624,7 @@ function update_current_wx(data) {
     // Updated time
     epoch = parseFloat( data["dateTime"] ).toFixed(0);
     updated = moment.unix(epoch).utcOffset($moment_js_utc_offset).format("LL, LTS");
-    updated_text = "Connected to weather station live. Data received " + updated;
+    updated_text = "$obs.label.mqtt_websockets_connected " + updated;
     jQuery(".updated").html( updated_text );
     jQuery(".onlineMarker").show(); // Show the online beacon
     jQuery(".offlineMarker").hide(); // Hide offline beacon
@@ -574,7 +671,7 @@ function update_current_wx(data) {
     
     // Apparent Temperature US
     if ( data.hasOwnProperty("appTemp_F") ) {
-        jQuery(".feelslike").html( "Feels like: " + parseFloat(parseFloat(data["appTemp_F"])).toLocaleString("$system_locale_js", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " $unit.label.outTemp" ); 
+        jQuery(".feelslike").html( "$obs.label.feels_like: " + parseFloat(parseFloat(data["appTemp_F"])).toLocaleString("$system_locale_js", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " $unit.label.outTemp" ); 
     }
 
     // Dewpoint US
@@ -584,7 +681,7 @@ function update_current_wx(data) {
     
     // Apparent Temperature Metric
     if ( data.hasOwnProperty("appTemp_C") ) {
-        jQuery(".feelslike").html( "Feels like: " + parseFloat(parseFloat(data["appTemp_C"])).toLocaleString("$system_locale_js", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " $unit.label.outTemp" );
+        jQuery(".feelslike").html( "$obs.label.feels_like: " + parseFloat(parseFloat(data["appTemp_C"])).toLocaleString("$system_locale_js", {minimumFractionDigits: 1, maximumFractionDigits: 1}) + " $unit.label.outTemp" );
     }
     
     #if $Extras.has_key("show_cloudbase") and $Extras.show_cloudbase == '1'
@@ -1005,9 +1102,7 @@ function showChart(json_file) {
             // If windRose is present, configure a special chart to show that data
             if (observation_type == "windRose") {
                 var categories = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
-                //options.chart.className = "highcharts-windRose";
-                //options.chart.width = 575;
-                //options.responsive = { rules: [{ condition: { maxWidth: 575 } }] }
+                options.chart.className = "highcharts-windRose"; // Used for dark mode
                 options.chart.type = "column";
                 options.chart.polar = true;
                 options.chart.alignTicks = false;
@@ -1019,10 +1114,12 @@ function showChart(json_file) {
                 options.xAxis.crosshair = true;
                 options.xAxis.categories = categories;
                 options.xAxis.tickmarkPlacement = 'on';
-                options.legend.align = "right";
+                //options.legend.align = "right";
                 options.legend.verticalAlign = "top";
-                options.legend.y = 100;
+                options.legend.x = 210;
+                options.legend.y = 119;
                 options.legend.layout = "vertical";
+                options.legend.floating = true;
                 options.yAxis[0].min = 0;
                 options.yAxis[0].endOnTick = false;
                 options.yAxis[0].reversedStacks = false;
@@ -1038,6 +1135,7 @@ function showChart(json_file) {
                 // Reset the tooltip
                 options.tooltip = {}
                 options.tooltip.shared = true;
+                options.tooltip.valueSuffix = '%'
                 
                 // Since wind rose is a special observation, I did not re-do the JSON arrays to accomodate it as a separate array.
                 // So we need to grab the data array within the series and save it to a temporary array, delete the entire chart series, 
@@ -1048,7 +1146,7 @@ function showChart(json_file) {
                     options.series.push(ns);
                 });
             }
-            
+                        
             // Finally all options are done, now show the chart
             var chart = new Highcharts.chart(options);
 
