@@ -27,14 +27,16 @@
     #set $seconds %= 3600
     #set $minutes = $seconds//60
     #set $seconds %= 60
-    #set $daylight_str = "%d hours, %d minutes, %d seconds" % ($hours, $minutes, $seconds)
+    #set $daylight_str = "%d %s, %d %s, %d %s" % ($hours, $obs.label.hour[0] if ( $hours == 1 ) else $obs.label.hour[1], $minutes, $obs.label.minute[0] if ( $minutes == 1 ) else $obs.label.minute[1], $seconds, $obs.label.second[0] if ( $seconds == 1 ) else $obs.label.second[1])
 
     #set $yesterday = $now - 24*3600
     #set $yesterday_daylight = $almanac($almanac_time=$yesterday).sun.set.raw - $almanac($almanac_time=$yesterday).sun.rise.raw
     #set $difference = $today_daylight - $yesterday_daylight
     #if $difference
       #set $delta = abs($difference)
-      #set $amt_str = "%s%d seconds" % (str(int($delta) // 60) + ' minutes, ' if ($delta // 60) > 0 else '', $delta % 60 if ($delta // 60) > 0 else $delta)
+      #set $minutes_text = $obs.label.minute[0] if ( (int($delta) // 60) == 1 ) else $obs.label.minute[1]
+      #set $seconds_text = $obs.label.second[0] if ( ($delta % 60) == 1 ) else $obs.label.second[1]
+      #set $amt_str = "%s%d %s" % (str(int($delta) // 60) + ' ' + $minutes_text + ', ' if ($delta // 60) > 0 else '', $delta % 60 if ($delta // 60) > 0 else $delta, $seconds_text)
       #if $difference > 0
         #set $delta_str = "%s %s" % ( $amt_str, $obs.label.more_than_yesterday )
       #else
@@ -47,9 +49,6 @@
 #end if
 
 <div id="celestial_widget" class="widget">
-  <div class="widget_title">
-    $obs.label.celestial
-  </div>
   <div class="widget_contents">
   #if $almanac.hasExtras
     <div id="celestial_details">
