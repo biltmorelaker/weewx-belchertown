@@ -918,10 +918,6 @@ p.entry-meta {
     .site-container .site-footer {
         text-align: center;
     }
-    
-    .site-footer .footerLeft, .site-footer .footerRight {
-        float:none;
-    }
 }
 
 /* Phones */
@@ -1212,8 +1208,13 @@ p.entry-meta {
     margin: 0 auto;
 }
 
-.footerLeft { float: left; padding-left:20px; }
-.footerRight { float:right; padding-right: 20px; }
+.footerLeft { }
+.footerCenter { text-align:center; }
+.footerRight { text-align:right }
+.updateavailable { 
+    display:block;
+    line-height: 10px;
+}
 
 /* Custom wx page */
 
@@ -1455,7 +1456,7 @@ p.entry-meta {
 	padding-top:20px !important;
 }
 
-.current_temp .temp {
+.current_temp .outtemp_outer {
 	font-size:65px;
 }
 
@@ -1463,7 +1464,7 @@ p.entry-meta {
 	font-size:40px;
 }
 
-.tempsup { 
+.outtempunitlabelsuper {
 	top:-1.0em;
 	font-size:50%;
 }
@@ -1934,15 +1935,11 @@ input:checked + .slider:before {
     
 	.site-footer { text-align:center !important; }
 	.footerLeft { 
-		float:none !important; 
-		display:block;
-		padding:0px !important;
+		padding-bottom:10px;
 	}
 	.footerRight { 
-		float:none !important; 
-		display:block;
-		margin-top:10px;
-		padding:0px !important;
+		text-align:center;
+		padding-top:10px;
 	}
     
     .current_obs_top img {
@@ -1955,7 +1952,7 @@ input:checked + .slider:before {
         padding-top: 0px !important;
     }
     
-    .current_temp .temp {
+    .current_temp .outtemp_outer {
         font-size: 55px;
     }
 	
@@ -2242,7 +2239,7 @@ input:checked + .slider:before {
         /* text-align: center; */
     }
     
-    .pi .temp {
+    .pi .outtemp_outer {
         font-size:40px;
         font-weight:bold;
         float:right;

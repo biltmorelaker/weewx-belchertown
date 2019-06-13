@@ -59,7 +59,7 @@ def logerr(msg):
     logmsg(syslog.LOG_ERR, msg)
     
 # Print version in syslog for easier troubleshooting
-VERSION = "1.0.1"
+VERSION = "1.1b2"
 loginf("version %s" % VERSION)
 
 class getData(SearchList):
@@ -86,11 +86,11 @@ class getData(SearchList):
         manager = self.generator.db_binder.get_manager(binding)
 
         # Setup belchertown_root_url for the absolute links
-        try:
-            belchertown_root_url = self.generator.skin_dict['Extras']['belchertown_root_url']
-        except:
-            # Force a blank root url if the default "" is removed from skin.conf
-            belchertown_root_url = ""
+        #try:
+        #    belchertown_root_url = self.generator.skin_dict['Extras']['belchertown_root_url']
+        #except:
+        #    # Force a blank root url if the default "" is removed from skin.conf
+        #    belchertown_root_url = ""
             
         belchertown_debug = self.generator.skin_dict['Extras'].get('belchertown_debug', 0)
 
@@ -118,11 +118,14 @@ class getData(SearchList):
             system_locale, locale_encoding = locale.getdefaultlocale()
         else:
             try:
-                # Locale needs to be in locale.encoding format. Example: "en_US.UTF-8", or "de_DE.UTF-8"
+                # Try setting the locale. Locale needs to be in locale.encoding format. Example: "en_US.UTF-8", or "de_DE.UTF-8"
                 locale.setlocale(locale.LC_ALL, self.generator.skin_dict['Extras']['belchertown_locale'])
                 system_locale, locale_encoding = locale.getlocale()
             except Exception as error:
-                raise Warning( "Error changing locale to %s. This locale may not exist on your system, or you have a typo. For example the correct way to define this skin setting is 'en_US.UTF-8'. The locale also needs to be installed onto your system first before Belchertown Skin can use it. Please check Google on how to install locales onto your system. Or use the default 'auto' locale skin setting. Full error: %s" % ( self.generator.skin_dict['Extras']['belchertown_locale'], error ) )
+                # The system can't find the locale requested, so just set the variables anyways for JavaScript's use.
+                system_locale, locale_encoding = self.generator.skin_dict['Extras']['belchertown_locale'].split(".")
+                if belchertown_debug:
+                    logerr( "Locale: Error using locale %s. This locale may not be installed on your system and you may see unexpected results. Belchertown skin JavaScript will try to use this locale. Full error: %s" % ( self.generator.skin_dict['Extras']['belchertown_locale'], error ) )
         
         if system_locale is None:
             # Unable to determine locale. Fallback to en_US
@@ -501,7 +504,7 @@ class getData(SearchList):
         """
         if self.generator.skin_dict['Extras']['forecast_enabled'] == "1":
             forecast_file = local_root + "/json/darksky_forecast.json"
-            forecast_json_url = belchertown_root_url + "/json/darksky_forecast.json"
+            #forecast_json_url = belchertown_root_url + "/json/darksky_forecast.json"
             darksky_secret_key = self.generator.skin_dict['Extras']['darksky_secret_key']
             darksky_units = self.generator.skin_dict['Extras']['darksky_units'].lower()
             darksky_lang = self.generator.skin_dict['Extras']['darksky_lang'].lower()
@@ -551,9 +554,11 @@ class getData(SearchList):
             visibility = locale.format("%g", float( data["currently"]["visibility"] ) )
             
             if data["currently"]["icon"] == "partly-cloudy-night":
-                current_obs_icon = '<img id="wxicon" src="'+belchertown_root_url+'/images/partly-cloudy-night.png">'
+                #current_obs_icon = '<img id="wxicon" src="./images/partly-cloudy-night.png">'
+                current_obs_icon = 'partly-cloudy-night.png'
             else:
-                current_obs_icon = '<img id="wxicon" src="'+belchertown_root_url+'/images/'+data["currently"]["icon"]+'.png">'
+                #current_obs_icon = '<img id="wxicon" src="./images/'+data["currently"]["icon"]+'.png">'
+                current_obs_icon = data["currently"]["icon"]+'.png'
 
             # Even though we specify the DarkSky unit as darksky_units, if the user selects "auto" as their unit
             # then we don't know what DarkSky will return for visibility. So always use the DarkSky output to 
@@ -566,7 +571,7 @@ class getData(SearchList):
                 visibility_unit = ""
                 
         else:
-            forecast_json_url = ""
+            #forecast_json_url = ""
             current_obs_icon = ""
             current_obs_summary = ""
             visibility = ""
@@ -658,6 +663,66 @@ class getData(SearchList):
             eqmag = ""
             eqlat = ""
             eqlon = ""
+            
+       
+        """
+        Version Update Data
+        """
+        if self.generator.skin_dict['Extras']['check_for_updates'] == "1":
+            github_version_file = local_root + "/json/github_version.json"
+            github_version_is_stale = False
+            
+            github_version_url = "https://api.github.com/repos/poblabs/weewx-belchertown/releases/latest"
+            
+            # Determine if the file exists and get it's modified time. If it's older than an hour then it's stale
+            if os.path.isfile( github_version_file ):
+                if ( int( time.time() ) - int( os.path.getmtime( github_version_file ) ) ) > 21600:
+                    github_version_is_stale = True
+            else:
+                # File doesn't exist, download a new copy
+                github_version_is_stale = True
+            
+            # File is stale, download a new copy
+            if github_version_is_stale:
+                # Download new GitHub data
+                try:
+                    import urllib2
+                    user_agent = 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_4; en-US) AppleWebKit/534.3 (KHTML, like Gecko) Chrome/6.0.472.63 Safari/534.3'
+                    headers = { 'User-Agent' : user_agent }
+                    req = urllib2.Request( github_version_url, None, headers )
+                    response = urllib2.urlopen( req )
+                    #page = response.read()
+                    page = json.load( response )
+                    response.close()
+                except Exception as error:
+                    logerr( "Update Checker: Error downloading GitHub Version data. The error is: %s" % error )
+                    
+                try:
+                    # Only save the tag_name. Typical tag is weewx-belchertown-x.y where x.y is the version number. So split on "-" and save the version number only
+                    tag_name = page["tag_name"].split("-")[2]
+                    try:
+                        # Save data to file. w+ creates the file if it doesn't exist, and truncates the file and re-writes it everytime
+                        with open( github_version_file, 'w+' ) as file:
+                            file.write( tag_name )
+                            loginf( "Update Checker: New GitHub Version file downloaded to %s" % github_version_file )
+                    except IOError, e:
+                        logerr( "Update Checker: Error writing GitHub Version info to %s. Reason: %s" % ( github_version_file, e) )
+                except:
+                    pass
+                
+            try:
+                # Process the file
+                with open( github_version_file, "r" ) as read_file:
+                    data = read_file.read()
+            except IOError, e:
+                logerr( "Update Checker: Unable to open %s. Reason: %s" % ( github_version_file, e) )
+                data = ""
+            
+            github_version = data
+        else:
+            # Empty default
+            github_version = ""
+
         
         """
         Get Current Station Observation Data
@@ -768,6 +833,7 @@ class getData(SearchList):
         """
         facebook_enabled = self.generator.skin_dict['Extras']['facebook_enabled']
         twitter_enabled = self.generator.skin_dict['Extras']['twitter_enabled']
+        social_share_html = self.generator.skin_dict['Extras']['social_share_html']
         twitter_text = label_dict["twitter_text"]
         twitter_owner = label_dict["twitter_owner"]
         twitter_hashtags = label_dict["twitter_hashtags"]
@@ -783,7 +849,7 @@ class getData(SearchList):
                   fjs.parentNode.insertBefore(js, fjs);
                 }(document, 'script', 'facebook-jssdk'));</script>
                 <div class="fb-like" data-href="%s" data-width="500px" data-layout="button_count" data-action="like" data-show-faces="false" data-share="true"></div>
-            """ % belchertown_root_url
+            """ % social_share_html
         else:
             facebook_html = ""
         
@@ -793,7 +859,7 @@ class getData(SearchList):
                     !function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0],p=/^http:/.test(d.location)?'http':'https';if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src=p+'://platform.twitter.com/widgets.js';fjs.parentNode.insertBefore(js,fjs);}}(document, 'script', 'twitter-wjs');
                 </script>
                 <a href="https://twitter.com/share" class="twitter-share-button" data-url="%s" data-text="%s" data-via="%s" data-hashtags="%s">Tweet</a>
-            """ % ( belchertown_root_url, twitter_text, twitter_owner, twitter_hashtags )
+            """ % ( social_share_html, twitter_text, twitter_owner, twitter_hashtags )
         else:
             twitter_html = ""
         
@@ -815,7 +881,7 @@ class getData(SearchList):
             
         # Build the search list with the new values
         search_list_extension = { 'belchertown_version': VERSION,
-                                  'belchertown_root_url': belchertown_root_url,
+                                  #'belchertown_root_url': belchertown_root_url,
                                   'belchertown_debug': belchertown_debug,
                                   'moment_js_utc_offset': moment_js_utc_offset,
                                   'highcharts_timezoneoffset': highcharts_timezoneoffset,
@@ -847,7 +913,7 @@ class getData(SearchList):
                                   'windSpeedUnitLabel': windSpeedUnitLabel,
                                   'noaa_header_html': noaa_header_html,
                                   'default_noaa_file': default_noaa_file,
-                                  'forecast_json_url': forecast_json_url,
+                                  #'forecast_json_url': forecast_json_url,
                                   'current_obs_icon': current_obs_icon,
                                   'current_obs_summary': current_obs_summary,
                                   'visibility': visibility,
@@ -863,6 +929,7 @@ class getData(SearchList):
                                   'earthquake_magnitude': eqmag,
                                   'earthquake_lat': eqlat,
                                   'earthquake_lon': eqlon,
+                                  'github_version': github_version,
                                   'social_html': social_html }
 
         # Finally, return our extension as a list:
