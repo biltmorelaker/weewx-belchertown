@@ -2179,7 +2179,11 @@ input:checked + .slider:before {
         padding: 0px;
         overflow: hidden;
         overflow-x: hidden;
+        overflow-y:hidden;
+        overflow: -moz-scrollbars-none;
+        -ms-overflow-style: none;
     }
+    body::-webkit-scrollbar { width: 0 !important }
 	
     /* bold kiosk display font if chosen in skin.conf or weewx.conf */	
 	.pi .site-inner-bold {
@@ -2339,7 +2343,7 @@ input:checked + .slider:before {
     .pi .station-observations {
 		font-size: 18px;
         line-height: 20px;
-		margin-top: 25px;
+		margin-top: 20px;
 	}
     
     .pi .small-almanac {
@@ -2350,7 +2354,7 @@ input:checked + .slider:before {
 	
 	.pi .maxgustouter {
 		font-size: 18px;
-		margin: 5px;
+		margin: 0px;
 	}	
 
 	.pi .sunrise-set-image {
