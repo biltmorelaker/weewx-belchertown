@@ -975,6 +975,9 @@ function showChart(json_file, prepend_renderTo=false) {
                     case "plot_tooltip_date_format":
                         plot_tooltip_date_format = optionVal;
                         break;
+                    case "css_class":
+                        css_class = optionVal;
+                        break;
                 }
             });
             
@@ -1147,6 +1150,11 @@ function showChart(json_file, prepend_renderTo=false) {
             }
             
             belchertown_debug( options.chart.renderTo + ": building a " + type + " chart" );
+            
+            if ( css_class ) {
+                jQuery( "#" + options.chart.renderTo ).addClass( css_class );
+                belchertown_debug( options.chart.renderTo + ": div id is " + options.chart.renderTo + " and adding CSS class: " + css_class );
+            }
             
             options.chart.type = type;
             options.title.text = title;
@@ -1362,6 +1370,75 @@ function showChart(json_file, prepend_renderTo=false) {
                 options.series = [];
                 newSeries.forEach( ns => {
                     options.series.push(ns);
+                });
+            }
+            
+            // If weather radial is present, configure a special chart to show that data
+            // https://www.highcharts.com/blog/tutorials/209-the-art-of-the-chart-weather-radials/
+            if (observation_type == "weatherRadial") {
+                options.chart.type = "columnrange";
+                options.chart.polar = true;
+                
+                options.legend = { "enabled": false }
+                
+                var minimum_flattened = [];
+                var maximum_flattened = [];
+                options.series[0].data.forEach( seriesData => {
+                    minimum_flattened.push(seriesData[1]);
+                    maximum_flattened.push(seriesData[2]);
+                });
+                var outTemp_min = Math.min(...minimum_flattened);
+                var outTemp_max = Math.max(...maximum_flattened);
+                
+                options.yAxis = {
+                    showFirstLabel: true,
+                    //tickInterval: 25,
+                    //min: outTemp_min,
+                    min: -10,
+                    max: outTemp_max
+                }
+                
+                options.xAxis = {}
+                options.xAxis = {
+                    labels: {
+                        format: "{value: %b}"
+                    },
+                    tickInterval: 2592000000,
+                    showLastLabel: true,
+                    type: "datetime"
+                }
+                
+                options.plotOptions = {}
+                options.plotOptions = {
+                  series: {
+                    turboThreshold: 0,
+                    stacking: "normal",
+                    showInLegend: false,
+                  }
+                }
+                
+                options.tooltip = {
+                    useHTML: true,
+                    headerFormat: "<small>{point.x:%d %B, %Y}</small>",
+                    pointFormat: "<table>\n  <tr>\n    <th>low</th>\n    <td>{point.low}</td>\n  </tr>\n  <tr>\n    <th>high</th>\n    <td>{point.high}</td>\n  </tr>\n</table>"
+                }
+
+                // Update data
+                var currentSeriesData = options.series[0].data;
+                var newSeriesData = [];
+                currentSeriesData.forEach( seriesData => {
+                    // Set color of the column based on the average temperature
+                    var color = get_outTemp_color( options.series[0].radial_outTemp_unit, seriesData[3], true );                    
+                    newSeriesData.push({
+                        x: seriesData[0],
+                        low: seriesData[1],
+                        high: seriesData[2],
+                        color: color
+                    });
+                });
+                options.series = [];
+                options.series.push({
+                    data: newSeriesData
                 });
             }
             
