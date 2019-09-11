@@ -1,6 +1,12 @@
 #encoding UTF-8
 #import datetime
 
+#if "-" in str($station.stn_info.latitude_f)
+#set global $hemisphere = "southern-hemisphere"
+#else
+#set global $hemisphere = "northern-hemisphere"
+#end if
+
 var pages = ["graphs", "records", "reports", "about"];
 // If this page we're on now is listed as a subpage, use ".." to get to the relative root
 function get_relative_url() {
@@ -275,6 +281,10 @@ function highcharts_tooltip_factory(obsvalue, point_obsType, highchartsReturn=fa
                 if ( typeof decimalPoint === "undefined" ) {
                     decimalPoint = "$highcharts_decimal";
                 }
+                // If thousandsSep is undefined, use the auto detect from the skin since this comes from the skin.
+                if ( typeof thousandsSep === "undefined" ) {
+                    thousandsSep = "$highcharts_thousands";
+                }
                     
                 output = Highcharts.numberFormat(obsvalue, rounding, decimalPoint, thousandsSep);
             }
@@ -471,25 +481,25 @@ function update_weewx_data( data ) {
             jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-new'></div>" );
             break;
         case "1":
-            jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-waxing-crescent-1'></div>" );
+            jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-waxing-crescent-1 $hemisphere'></div>" );
             break;
         case "2":
-            jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-first-quarter'></div>" );
+            jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-first-quarter $hemisphere'></div>" );
             break;
         case "3":
-            jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-waxing-gibbous-3'></div>" );
+            jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-waxing-gibbous-3 $hemisphere'></div>" );
             break;
         case "4":
             jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-full'></div>" );
             break;
         case "5":
-            jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-waning-gibbous-3'></div>" );
+            jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-waning-gibbous-3 $hemisphere'></div>" );
             break;
         case "6":
-            jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-first-quarter'></div>" );
+            jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-first-quarter $hemisphere'></div>" );
             break;
         case "7":
-            jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-waning-crescent-4'></div>" );
+            jQuery(".moon-icon").html( "<div class='wi wi-moon-alt-waning-crescent-4 $hemisphere'></div>" );
             break;
     }
     jQuery(".moon-phase").html( titleCase( data["almanac"]["moon"]["moon_phase"] ) ); // Javascript function above
@@ -503,7 +513,7 @@ function ajaxforecast() {
 
 function update_forecast_data( data ) {
     belchertown_debug("Updating forecast data");
-    // WX Icon
+    // WX icon in temperature box
     if ( data['currently']['icon'] == "partly-cloudy-night" ) {
         // partly-cloudy-night could also be clear-day
         jQuery("#wxicon").attr( "src", get_relative_url() + "/images/partly-cloudy-night.png" );
@@ -901,7 +911,8 @@ Highcharts.setOptions({
         timezoneOffset: $highcharts_timezoneoffset
     },
     lang: {
-        decimalPoint: '$highcharts_decimal'
+        decimalPoint: '$highcharts_decimal',
+        thousandsSep: '$highcharts_thousands'
     }
 });
 
