@@ -578,7 +578,7 @@ img.alignright {
 }
 
 .header-image .site-title > a {
-	background: url('') no-repeat left;
+	/* background: url('') no-repeat left; */
 	float: left;
 	min-height: 80px;
 	width: 100%;
@@ -1004,7 +1004,6 @@ p.entry-meta {
 	
 	.site-header .widget-area {
 		float: none;
-		text-align: auto;
 	}
 	
 	.menu-toggle {
@@ -1781,7 +1780,7 @@ table.celestial td.label {
     text-align:center;
 }
 
-.graph_outer {
+.graph-outer {
     width: 100%;
     margin: 0 auto;
     text-align: center;
@@ -1790,6 +1789,11 @@ table.celestial td.label {
 .highcharts-row {
 	/* border-top:1px solid #D7D7D7; */
 	/* margin-top:25px; */
+}
+
+span.highcharts-title {
+    width: 100% !important;
+    text-align: center !important;
 }
 
 .wx-buttons { 
@@ -2195,8 +2199,6 @@ input:checked + .slider:before {
         font-weight: normal;
         padding: 0px;
         overflow: hidden;
-        overflow-x: hidden;
-        overflow-y:hidden;
         overflow: -moz-scrollbars-none;
         -ms-overflow-style: none;
     }
