@@ -300,7 +300,7 @@ For ease of readability I have broken them out into separate tables. However you
 | mqtt_websockets_host | "" | The MQTT broker hostname or IP. **Versions 0.8.2 and prior** this option is called `mqtt_host`
 | mqtt_websockets_port | 8080 | The port of the MQTT broker's **Websockets** port. Check your broker's documentation. **Versions 0.8.2 and prior** this option is called `mqtt_port`
 | mqtt_websockets_ssl | 0 | Set to 1 if your broker is using SSL. **Versions 0.8.2 and prior** this option is called `mqtt_ssl`
-| mqtt_websockets_topic | "" | The topic to subscribe to for your weather data. **Versions 0.8.2 and prior** this option is called `mqtt_topic`
+| mqtt_websockets_topic | "" | The topic to subscribe to for your weather data. Typically this should end in `/loop`. (e.g. `weather/loop`) depending on your [MQTT] extension settings.  **Versions 0.8.2 and prior** this option is called `mqtt_topic`
 | disconnect_live_website_visitor | 1800000 | The number of seconds after a visitor has loaded your page that we disconnect them from the live streaming updates. The idea here is to save your broker from a streaming connection that never ends. Time is in milliseconds. 0 = disabled. 300000 = 5 minutes. 1800000 = 30 minutes
 
 ### Forecast Options
@@ -479,6 +479,9 @@ If you're interested in this type of setup, you'll need these items:
 ---
 * Q: Do I have to use the graphs?
 * A: Nope! If you have it disabled we will hide those portions of the site. It comes packaged with this theme already though, so you can leave it enabled. 
+---
+* Q: I have weather alerts enabled, why do I see so many duplicates alerts?
+* A: These "duplicates" come from DarkSky, however if you click on each one you'll see they aren't duplicates. They have unique links to unique alerts. Perhaps you're in a region that borders other regions? I'm not sure. As a result of this, I can't easily filter them out and take the risk of removing an alert that's important to you. It's best to reach DarkSky through your developer portal and ask this question of them. 
 ---
 * Q: Why does the skin take a while to generate sometimes?
 * A: This is because of the graph system. That file goes through your archive's day, week, month and year values, and all time values to generate the graphs. Depending on how big your database, and how slow your system is (like a Raspberry Pi) is this could take a little longer. If you want to speed it up you can disable the charts or upgrade to better hardware. 
