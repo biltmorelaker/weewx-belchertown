@@ -1,4 +1,26 @@
-1.1 ???, 2020
+1.2 ???, 2020
+
+### Breaking Changes
+* DarkSky has announced that they were acquired by Apple and will be removing their API. This release moves the forecasting to Aeris Weather.
+* Aeris Weather is a very close drop-in replacement and is free if you send your station data to pwsweather.com. In return they give you free access to their weather API. I was considering OpenWeatherMap, but they were lacking some key observations in my opinion. 
+* Forecast file darksky_forecast.json renamed to forecast.json
+* skin.conf option darksky_units renamed to forecast_units
+
+### Added
+* An entire forecast section to the labels. This allows you to translate the Aeris Weather observations to your language.
+* skin.conf option forecast_units. I incorporated the old DarkSky approach to the units. Options are si, ca, uk2 or us. See README for more info.
+
+### Changed
+* Renamed skin.conf label darksky_rain to forecast_rain
+* Renamed skin.conf label time_darksky_forecast_date to time_forecast_date
+* Weather alerts are available through Aeris but only for USA and Canada
+
+### Removed
+* Daily Forecast link in the forecast row is no longer available due to the way Aeris operates currently. Can't extrapolate a URL from the API.
+* skin.conf option darksky_secret_key
+* skin.conf option darksky_lang
+
+1.1 April 8, 2020
 
 ### Breaking Changes
 These changes are to align the skin closer to the way Highcharts has their options named.
