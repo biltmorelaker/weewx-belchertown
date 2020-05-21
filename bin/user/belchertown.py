@@ -112,10 +112,10 @@ class getData(SearchList):
 
         # Find the right HTML ROOT
         if 'HTML_ROOT' in self.generator.skin_dict:
-            local_root = os.path.join(self.generator.config_dict['WEEWX_ROOT'],
+            html_root = os.path.join(self.generator.config_dict['WEEWX_ROOT'],
                                       self.generator.skin_dict['HTML_ROOT'])
         else:
-            local_root = os.path.join(self.generator.config_dict['WEEWX_ROOT'],
+            html_root = os.path.join(self.generator.config_dict['WEEWX_ROOT'],
                                       self.generator.config_dict['StdReport']['HTML_ROOT'])
         
         # Setup UTC offset hours for moment.js in index.html
@@ -497,14 +497,14 @@ class getData(SearchList):
         # Get the unit label from the skin dict for speed. 
         windSpeed_unit = self.generator.skin_dict["Units"]["Groups"]["group_speed"]
         windSpeed_unit_label = self.generator.skin_dict["Units"]["Labels"][windSpeed_unit]
-                
+       
         """
         Get NOAA Data
         """
         years = []
         noaa_header_html = ""
         default_noaa_file = ""
-        noaa_dir = local_root + "/NOAA/"
+        noaa_dir = html_root + "/NOAA/"
         
         try:
             noaa_file_list = os.listdir( noaa_dir )
@@ -557,7 +557,17 @@ class getData(SearchList):
         """
         Forecast Data
         """
-        if self.generator.skin_dict['Extras']['forecast_enabled'] == "1":
+        if self.generator.skin_dict['Extras']['forecast_enabled'] == "1" and self.generator.skin_dict['Extras']['forecast_api_id'] != "" or 'forecast_dev_file' in self.generator.skin_dict['Extras']:
+        
+            forecast_file = html_root + "/json/forecast.json"
+            forecast_api_id = self.generator.skin_dict['Extras']['forecast_api_id']
+            forecast_api_secret = self.generator.skin_dict['Extras']['forecast_api_secret']
+            forecast_units = self.generator.skin_dict['Extras']['forecast_units'].lower()
+            latitude = self.generator.config_dict['Station']['latitude']
+            longitude = self.generator.config_dict['Station']['longitude']
+            forecast_stale_timer = self.generator.skin_dict['Extras']['forecast_stale']
+            forecast_is_stale = False
+        
             def aeris_coded_weather( data ):
                 # https://www.aerisweather.com/support/docs/api/reference/weather-codes/
                 output = ""
@@ -660,28 +670,28 @@ class getData(SearchList):
                     "cloudyn": "cloudy",
                     "cloudyw": "cloudy",
                     "cloudywn": "cloudy",
-                    "cold": "TODO",
-                    "coldn": "TODO",
+                    "cold": "clear-day",
+                    "coldn": "clear-night",
                     "drizzle": "rain",
                     "drizzlen": "rain",
-                    "dust": "TODO",
-                    "dustn": "TODO",
+                    "dust": "fog",
+                    "dustn": "fog",
                     "fair": "clear-day",
                     "fairn": "clear-night",
                     "drizzlef": "rain",
                     "fdrizzlen": "rain",
-                    "flurries": "snow",
-                    "flurriesn": "snow",
-                    "flurriesw": "snow",
-                    "flurrieswn": "snow",
+                    "flurries": "sleet",
+                    "flurriesn": "sleet",
+                    "flurriesw": "sleet",
+                    "flurrieswn": "sleet",
                     "fog": "fog",
                     "fogn": "fog",
                     "freezingrain": "rain",
                     "freezingrainn": "rain",
-                    "hazy": "TODO",
-                    "hazyn": "TODO",
+                    "hazy": "fog",
+                    "hazyn": "fog",
                     "hot": "clear-day",
-                    "N/A ": "N/A",
+                    "N/A ": "unknown",
                     "mcloudy": "partly-cloudy-day",
                     "mcloudyn": "partly-cloudy-night",
                     "mcloudyr": "rain",
@@ -702,8 +712,8 @@ class getData(SearchList):
                     "mcloudytwn": "thunderstorm",
                     "mcloudyw": "partly-cloudy-day",
                     "mcloudywn": "partly-cloudy-night",
-                    "na": "TODO",
-                    "na": "TODO",
+                    "na": "unknown",
+                    "na": "unknown",
                     "pcloudy": "partly-cloudy-day",
                     "pcloudyn": "partly-cloudy-night",
                     "pcloudyr": "rain",
@@ -740,8 +750,8 @@ class getData(SearchList):
                     "sleetn": "sleet",
                     "sleetsnow": "sleet",
                     "sleetsnown": "sleet",
-                    "smoke": "TODO",
-                    "smoken": "TODO",
+                    "smoke": "fog",
+                    "smoken": "fog",
                     "snow": "snow",
                     "snown": "snow",
                     "snoww": "snow",
@@ -768,16 +778,7 @@ class getData(SearchList):
                     "wintrymixn": "sleet"
                 }
                 return icon_dict[icon_name]   
-            
-            forecast_file = local_root + "/json/forecast.json"
-            forecast_api_id = self.generator.skin_dict['Extras']['forecast_api_id']
-            forecast_api_secret = self.generator.skin_dict['Extras']['forecast_api_secret']
-            forecast_units = self.generator.skin_dict['Extras']['forecast_units'].lower()
-            latitude = self.generator.config_dict['Station']['latitude']
-            longitude = self.generator.config_dict['Station']['longitude']
-            forecast_stale_timer = self.generator.skin_dict['Extras']['forecast_stale']
-            forecast_is_stale = False
-            
+                        
             forecast_current_url = "https://api.aerisapi.com/observations/%s,%s?&format=json&filter=allstations&filter=metar&limit=1&client_id=%s&client_secret=%s" % ( latitude, longitude, forecast_api_id, forecast_api_secret )
             forecast_url = "https://api.aerisapi.com/forecasts/%s,%s?&format=json&filter=day&limit=7&client_id=%s&client_secret=%s" % ( latitude, longitude, forecast_api_id, forecast_api_secret )
 
@@ -808,37 +809,48 @@ class getData(SearchList):
                         from urllib2 import Request, urlopen
                     user_agent = 'Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10_6_4; en-US) AppleWebKit/534.3 (KHTML, like Gecko) Chrome/6.0.472.63 Safari/534.3'
                     headers = { 'User-Agent' : user_agent }
-                    # Current conditions
-                    req = Request( forecast_current_url, None, headers )
-                    response = urlopen( req )
-                    current_page = response.read()
-                    response.close()
-                    # Forecast
-                    req = Request( forecast_url, None, headers )
-                    response = urlopen( req )
-                    forecast_page = response.read()
-                    response.close()
-                    if self.generator.skin_dict['Extras']['forecast_alert_enabled'] == "1":
-                        # Alerts
-                        req = Request( forecast_alerts_url, None, headers )
+                    if 'forecast_dev_file' in self.generator.skin_dict['Extras']:
+                        # Hidden option to use a pre-downloaded forecast file rather than using API calls for no reason
+                        dev_forecast_file = self.generator.skin_dict['Extras']['forecast_dev_file']
+                        req = Request( dev_forecast_file, None, headers )
                         response = urlopen( req )
-                        alerts_page = response.read()
+                        forecast_file_result = response.read()
                         response.close()
-                    
-                    # Combine all into 1 file
-                    if self.generator.skin_dict['Extras']['forecast_alert_enabled'] == "1":
-                        forecast_file_result = json.dumps( {"timestamp": int(time.time()), "current": [json.loads(current_page)], "forecast": [json.loads(forecast_page)], "alerts": [json.loads(alerts_page)]} )
                     else:
-                        forecast_file_result = json.dumps( {"timestamp": int(time.time()), "current": [json.loads(current_page)], "forecast": [json.loads(forecast_page)]} )
+                        # Current conditions
+                        req = Request( forecast_current_url, None, headers )
+                        response = urlopen( req )
+                        current_page = response.read()
+                        response.close()
+                        # Forecast
+                        req = Request( forecast_url, None, headers )
+                        response = urlopen( req )
+                        forecast_page = response.read()
+                        response.close()
+                        if self.generator.skin_dict['Extras']['forecast_alert_enabled'] == "1":
+                            # Alerts
+                            req = Request( forecast_alerts_url, None, headers )
+                            response = urlopen( req )
+                            alerts_page = response.read()
+                            response.close()
                         
+                        # Combine all into 1 file
+                        if self.generator.skin_dict['Extras']['forecast_alert_enabled'] == "1":
+                            forecast_file_result = json.dumps( {"timestamp": int(time.time()), "current": [json.loads(current_page)], "forecast": [json.loads(forecast_page)], "alerts": [json.loads(alerts_page)]} )
+                        else:
+                            forecast_file_result = json.dumps( {"timestamp": int(time.time()), "current": [json.loads(current_page)], "forecast": [json.loads(forecast_page)]} )
+                            
                 except Exception as error:
                     raise Warning( "Error downloading forecast data. Check the URL in your configuration and try again. You are trying to use URL: %s, and the error is: %s" % ( forecast_url, error ) )
                     
                 # Save forecast data to file. w+ creates the file if it doesn't exist, and truncates the file and re-writes it everytime
                 try:
                     with open( forecast_file, 'wb+' ) as file:
-                        # TODO Python 2/3
-                        file.write( forecast_file_result.encode('utf-8') )
+                        # Python 2/3
+                        try:
+                            file.write( forecast_file_result.encode('utf-8') )
+                        except:
+                            file.write( forecast_file_result )
                         loginf( "New forecast file downloaded to %s" % forecast_file )
                 except IOError as e:
                     raise Warning( "Error writing forecast info to %s. Reason: %s" % ( forecast_file, e) )
@@ -878,7 +890,7 @@ class getData(SearchList):
         """
         # Only process if Earthquake data is enabled
         if self.generator.skin_dict['Extras']['earthquake_enabled'] == "1":
-            earthquake_file = local_root + "/json/earthquake.json"
+            earthquake_file = html_root + "/json/earthquake.json"
             earthquake_stale_timer = self.generator.skin_dict['Extras']['earthquake_stale']
             latitude = self.generator.config_dict['Station']['latitude']
             longitude = self.generator.config_dict['Station']['longitude']
@@ -972,7 +984,7 @@ class getData(SearchList):
         Version Update Data
         """
         if self.generator.skin_dict['Extras']['check_for_updates'] == "1":
-            github_version_file = local_root + "/json/github_version.json"
+            github_version_file = html_root + "/json/github_version.json"
             github_version_is_stale = False
             
             github_version_url = "https://api.github.com/repos/poblabs/weewx-belchertown/releases/latest"
@@ -1189,10 +1201,18 @@ class getData(SearchList):
                 social_html += twitter_html
             social_html += "</div>"
 
+        """
+        Include custom.css if it exists in the HTML_ROOT folder
+        """
+        custom_css_file = html_root + "/custom.css"
+        # Determine if the file exists
+        if os.path.isfile( custom_css_file ):
+            custom_css_exists = True
+        else:
+            custom_css_exists = False
             
         # Build the search list with the new values
         search_list_extension = { 'belchertown_version': VERSION,
-                                  #'belchertown_root_url': belchertown_root_url,
                                   'belchertown_debug': belchertown_debug,
                                   'moment_js_utc_offset': moment_js_utc_offset,
                                   'highcharts_timezoneoffset': highcharts_timezoneoffset,
@@ -1226,7 +1246,6 @@ class getData(SearchList):
                                   'windSpeedUnitLabel': windSpeed_unit_label,
                                   'noaa_header_html': noaa_header_html,
                                   'default_noaa_file': default_noaa_file,
-                                  #'forecast_json_url': forecast_json_url,
                                   'current_obs_icon': current_obs_icon,
                                   'current_obs_summary': current_obs_summary,
                                   'visibility': visibility,
@@ -1242,7 +1261,8 @@ class getData(SearchList):
                                   'earthquake_lat': eqlat,
                                   'earthquake_lon': eqlon,
                                   'github_version': github_version,
-                                  'social_html': social_html }
+                                  'social_html': social_html,
+                                  'custom_css_exists': custom_css_exists }
 
         # Finally, return our extension as a list:
         return [search_list_extension]
