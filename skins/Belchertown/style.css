@@ -902,7 +902,7 @@ p.entry-meta {
     }
     
     .forecasts .forecast-day {
-        width: 235px;
+        width: 165px;
     }
     
     .eq-stats-row .col-sm-9 {
@@ -1210,10 +1210,6 @@ p.entry-meta {
 .footerLeft { }
 .footerCenter { text-align:center; }
 .footerRight { text-align:right }
-.updateavailable { 
-    display:block;
-    line-height: 10px;
-}
 
 /* Custom wx page */
 
@@ -1485,13 +1481,16 @@ p.entry-meta {
 
 .stn-high-low-table td {
 	text-align:center;
+    width:50%;
 }
 
 .windrow {
     /* margin-top: 25px; */
     border-top: 1px solid #D7D7D7;
     padding-top: 10px;
-    margin: 0 -15px 0 -15px;
+    /* margin: 0 -15px 0 -15px; */
+    margin: 0 0 0 0;
+    width: 105%;
 }
 
 .curwind {
@@ -1534,8 +1533,9 @@ p.entry-meta {
     position: relative;
     color: #555;
     border: solid #808080 5px;
-        margin-left: 60px;
+    margin-left: 60px;
     /* margin-top: -10px; */
+    margin: 0 auto;
 }
 
 .compass:before {
@@ -1588,7 +1588,8 @@ p.entry-meta {
     border-left: 7px solid transparent;
     border-right: 7px solid transparent;
     /* border-bottom: 21px solid red; */
-    border-top: 21px solid red;
+    /* border-top: 21px solid red; */
+    border-top: 21px solid #c50a1d;
     position: absolute;
     top: -10px;
     left: 38px;
@@ -1598,6 +1599,7 @@ p.entry-meta {
 
 .wind-table td {
 	text-align:center !important;
+    width:50%;
 }
 
 .windtext {
@@ -1753,6 +1755,7 @@ table.celestial td.label {
 .earthquake-container {
 	font-size:18px;
 	text-align:center;
+    min-height: 180px;
 }
 
 .snapshot-records-text, .eq-title {
@@ -1774,8 +1777,10 @@ table.celestial td.label {
 }
 
 .wx-graph-front {
-    font-size:25px;
-    padding-top:10px;
+    font-size: 24px;
+    padding-top: 30px;
+    /* font-size:25px; */
+    /* padding-top:10px; */
     padding-bottom:10px;
     text-align:center;
 }
@@ -1791,10 +1796,10 @@ table.celestial td.label {
 	/* margin-top:25px; */
 }
 
-span.highcharts-title {
-    width: 100% !important;
-    text-align: center !important;
-}
+/* span.highcharts-title { */
+    /* width: 100% !important; */
+    /* text-align: center !important; */
+/* } */
 
 .wx-buttons { 
     margin:0 auto;

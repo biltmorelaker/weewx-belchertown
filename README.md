@@ -48,6 +48,8 @@ Screenshot of light and dark modes
   * [Add Custom Content to the Front Page](#add-custom-content-to-the-front-page)
   * [Translating the Skin](#translating-the-skin)
   * [A Note About Date and Time Formatting in Your Locale](#a-note-about-date-and-time-formatting-in-your-locale)
+  * [How to use debug](#how-to-use-debug)
+  * [How to install the development version](#how-to-install-the-development-version)
   * [Frequently Asked Questions](#frequently-asked-questions)
   * [Raspberry Pi Console](#raspberry-pi-console)
   * [Donate](#donate)
@@ -279,17 +281,18 @@ For ease of readability I have broken them out into separate tables. However you
 
 | Name | Default | Description
 | ---- | ------- | ----------
-| check_for_updates | 1 | Setting this to 1 will enable checking GitHub for updates automatically every 6 hours (this is a hardcoded time interval). When an update is ready you will see the notification in the footer of the website.
 | belchertown_debug | 0 | Set this to 1 to enable this to turn on skin specific debug information.
 | belchertown_locale | "auto" | The locale to have the skin run with. Locale affects the language in certain fields, decimal identifier in the charts and time formatting. A setting of `"auto"` sets the locale to what the server is set to. If you want to override the server setting you can change this but it must be in `locale.encoding` format. For example: `"en_US.UTF-8"` or `"de_DE.UTF-8"`. The locale you want to use **must be installed on your server first** and how to install locales is **outside of the scope of Belchertown support**.  
 | theme | light | Options are: light, dark, auto. This defines which theme your site will use. Light is a white theme. Dark is a charcoal theme. Auto mode automatically changes your theme to light at the sunrise hour and dark at the sunset hour.
 | theme_toggle_enabled | 1 | This places a toggle button in your navigation menu which allows visitors to toggle between light and dark modes.
 | logo_image | "" | The **full** URL to your logo image. 330 pixels wide by 80 pixels high works best. Anything outside of this would need custom CSS. Using the full URL to your image makes sure it works on all pages.
+| logo_image_dark | "" | The **full** URL to your logo image to be used when the dark theme is active. 330 pixels wide by 80 pixels high works best. Anything outside of this would need custom CSS. Using the full URL to your image makes sure it works on all pages.
 | site_title | "My Weather Website" | If `logo_image` is not defined, then the `site_title` will be used. Define and change this to what you want your site title to be.
  |station_observations | "barometer", "dewpoint", "outHumidity", "rainWithRainRate" | This defines which observations you want displayed next to the radar. You can add, remove and re-order these observations. Options here **must** be weewx database schema names, except for `visibility` and `rainWithRainRate` which are custom options. `visibility` gets the visibility data from Aeris Weather (if enabled and available), and `rainWithRainRate` is the Rain Total and Rain Rate observations combined on 1 line.<br><br>**As of 1.1** you can specify the database binding if applicable. Just add `(data_binding=X)` next to the observation. For example `leafTemp2(data_binding=sdr_binding)` Note: if this custom observation is not in the LOOP and you're using MQTT updates, then this observation will not get updated automatically. Instead it will be available on page refresh only. All observations need to be in the LOOP for MQTT to update them automatically.
 | manifest_name | "My Weather Website" | Progressive Webapp: This is the name of your site when adding it as an app to your mobile device.
 | manifest_short_name | "MWW" | Progressive Webapp: This is the name of the icon on your mobile device for your website's app.
 | radar_html | A windy.com iFrame | Full HTML Allowed. Recommended size 650 pixels wide by 360 pixels high. This URL will be used as the radar iFrame or image hyperlink. If you are using windy.com for live radar, they have instructions on how to embed their maps. Go to windy.com, click on Weather Radar on the right, then click on embed widget on page. Make sure you use the sizes recommended earier in this description.
+| almanac_extras | 1 | Show the extra almanac details if available. **Requires pyephem to be installed on your machine.** Refer to the weewx user guide on more information.
 | highcharts_enabled | 1 | Show the charts on the website. 1 = enable, 0 = disable.
 | graph_page_show_all_button | 1 | Setting to 1 will enable an "All" button which will allow visitors to see all your graphs on one page in a condensed format with 2 graphs on a row (like the home page).
 | graph_page_default_graphgroup | "day" | This is the graph group that will load when visitors go to your Graphs page and have not clicked on a button to select a specific group. You can select "all" here and it will load all your graph groups within graphs.conf
@@ -341,14 +344,16 @@ For ease of readability I have broken them out into separate tables. However you
 | Name | Default | Description
 | ---- | ------- | -----------
 | forecast_enabled | 0 | 1 = enable, 0 = disable. Enables the forecast data from Aeris Weather Forecast API.
+| forecast_provider | "aeris" | The weather forecast provider. Options currently are "aeris" or "darksky"
 | forecast_api_id | "" | Your Aeris Weather API ID
 | forecast_api_secret | "" | Your Aeris Weather API secret
 | forecast_units | "us" | The units to use for the Aeris Weather forecast. I have chosen to keep the Dark Sky unit system going forward with the skin. Other unit options options are: `us`, `si`, `ca` and `uk2`. Check the [Forecast Units](#forecast-units) section for an explanation of the differences.
+| forecast_lang | "en" | **Only applies to DarkSky Weather** Change the language used in the DarkSky forecast. Read the DarkSky API for valid language options.
 | forecast_stale | 3540 | The number of seconds before the skin will download a new forecast update. Default is 59 minutes so that on the next archive interval at 60 minutes it will download a new file (based on 5 minute archive intervals (see weewx.conf, archive_interval)). ***WARNING*** 1 hour is recommended. Setting this too low will result in being blocked by Aeris Weather. Their free tier gives you 1,000 downloads a day, but **the skin uses 3 downloads per interval to download all the data it needs**. Use at your own risk. 3540 seconds = 59 minutes. 3600 seconds = 1 hour. 1800 seconds = 30 minutes. 900 = 15 minutes.
-| forecast_alert_enabled | 0 | **Weather Alerts are only supported for USA and Canada**. Set to 1 to enable weather alerts that are included with the Aeris Weather data. If you are using MQTT for automatic page updates, the alerts will appear and disappear as they are refreshed with the forecast update interval via `forecast_stale`. 
-| forecast_alert_limit | 1 | **Weather Alerts are only supported for USA and Canada**. The number of alerts to show for your location. Max of 10.
+| forecast_alert_enabled | 0 | **Aeris Weather Alerts are only supported for USA and Canada**. Set to 1 to enable weather alerts that are included with the Aeris Weather or DarkSky data. If you are using MQTT for automatic page updates, the alerts will appear and disappear as they are refreshed with the forecast update interval via `forecast_stale`. 
+| forecast_alert_limit | 1 | **Only applies to Aeris Weather Alerts**. The number of alerts to show for your location. Max of 10.
 | forecast_show_daily_forecast_link | 0 | Show a link beneath each forecast day to an external website with more details of the forecast.
-| forecast_daily_forecast_link | "" | The actual link to the external detailed forecast site of your choosing. You must provide all relevant URL links like location, lat/lon, etc., but you can use `YYYY` to specify the 4 digit year, `MM` to specify the 2 digit month and `DD` to specify the 2 digit day of the forecast link. For example: `https://wx.aerisweather.com/local/us/ma/belchertown/forecast/YYYY/MM/DD`
+| forecast_daily_forecast_link | "" | **Only applies to Aeris Weather Alerts**. The actual link to the external detailed forecast site of your choosing. You must provide all relevant URL links like location, lat/lon, etc., but you can use `YYYY` to specify the 4 digit year, `MM` to specify the 2 digit month and `DD` to specify the 2 digit day of the forecast link. For example: `https://wx.aerisweather.com/local/us/ma/belchertown/forecast/YYYY/MM/DD`
 
 
 ### Earthquake Options
@@ -370,7 +375,10 @@ These are the options for the social media sharing section at the top right of e
 | twitter_enabled | 0 | Enable the Twitter Share button
 | twitter_owner | "" | Your Twitter handle which will be mentioned when the share button is pressed
 | twitter_hashtags | "weewx #weather" | The hashtags to include in the share button's text. 
-
+| social_share_html | "" | This is the URL which users who click on your social share will be sent back to. Typically set this to your homepage.
+| twitter_text | "Check out my website: My Weather Website Weather Conditions" | **Located under the labels section** - This is the text which will get auto-generated for the Twitter share button
+| twitter_owner | "YourTwitterUsernameHere" | **Located under the labels section** - This is the username or owner of the Twitter account that will be mentioned in shares
+| twitter_hashtags | "weewx #weather" | **Located under the labels section** - The hashtags to include in the Twitter share. Do not include the first hashtag since it is already provided as part of the share code.
 
 ## Creating About Page and Records Page
 
@@ -470,6 +478,27 @@ If you're interested in this type of setup, you'll need these items:
 
 ![raspberry pi light and dark themes](https://user-images.githubusercontent.com/3484775/59552332-7fc22c00-8f53-11e9-8a84-7c3335f47249.png)
 
+## How to use debug
+
+Debug information will show a lot of useful information for troubleshooting a problem. Information such as MQTT messages, to skin theme and time settings to re-creating a chart for external debugging. If you need to use debug to find a problem with the skin, there are 2 ways to do this. 
+
+1. Preferred method: Add `/?debug=true` to your website's URL to enable it on adhoc. Example: http://example.com/?debug=true
+2. Set the skin option `belchertown_debug` to 1 and restart weewx.
+
+In both cases, you'll need to open the browsers console to find the debug information. [Refer to this to find the developer console for your browser](https://webmasters.stackexchange.com/a/77337).
+
+## How to install the development version
+
+If you want to try out the latest features the skin has to offer, you can [install the development branch](https://github.com/poblabs/weewx-belchertown/tree/development). To start download the [development zip file](https://github.com/poblabs/weewx-belchertown/archive/development.zip). Then you can 
+
+1. upload it to your weewx system and install it using `wee_extension --install development.zip` 
+
+or
+
+2. manually replace the files from the zip file with your weewx Belchertown skin files. 
+
+Either way, we need to overwrite your current Belchertown skin install in the `skins` folder and the `bin/user` foler with the development files. Then you can configure the new features you want and restart weewx when done. 
+
 ## Frequently Asked Questions
 
 * Q: How do I change my site title and page headers? I don't want to be called "My Weather Website"...
@@ -488,6 +517,16 @@ If you're interested in this type of setup, you'll need these items:
                 twitter_hashtags = "PWS #weewx #weather #wx"
                 rain = My Custom Rain Label
                 graphs_page_day_button = Today
+```
+---
+* Q: My units are wrong in the station observation or other MQTT enabled field.
+* A: You need to configure your MQTT extension to send the units you want. For example if you're using METRIC and your rain in MQTT is in centimeters, but you want to show rain as MM, you need to use the code below as an example:
+```
+[[MQTT]]
+        [[[inputs]]]
+                [[[[dayRain]]]]
+                        name = dayRain_mm
+                        units = mm
 ```
 ---
 * Q: How do I make this skin my default website?
