@@ -36,6 +36,6 @@ Credits:
     <br>Special thanks to Pat O'Brien for his theme and personal help to me to implement it on my website!
     <br>Thanks to Thomas Keffer for developing weeWX and making it available to everyone
     <br>Support from members of the weewx-user group - many of whom have contributed to weeWX development and extensions to it
-    <br>Forecast data Powered by <a href="https://darksky.net" target="_blank">Dark Sky</a>
+    <br>Forecast data and weather alerts powered by <a href="https://www.aerisweather.com/develop/api/" target="_blank">Aeris Weather's API</a>
     <br>Earthquake data from <a href="https://earthquake.usgs.gov/earthquakes/" target="_blank">USGS.gov</a> Earthquake Catalog Developer API
 
